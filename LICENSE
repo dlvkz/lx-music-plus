@@ -1,0 +1,9 @@
+LX Music+ is made of two apps, each under the license of the code it is built on:
+
+- desktop/  GNU Affero General Public License v3.0 with additional terms that prohibit commercial use
+            (desktop/LICENSE), as Any Listen, whose code its interface includes. The code of LX Music
+            desktop it is based on is also available under the Apache License 2.0 (desktop/LICENSE-LX-Music).
+
+- mobile/   Apache License 2.0 (mobile/LICENSE), as LX Music mobile.
+
+The files at the root of this repository (README.md, this file) are under the Apache License 2.0.
