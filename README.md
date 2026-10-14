@@ -25,12 +25,12 @@ both apps.
 
 | Platform | File | Notes |
 | --- | --- | --- |
-| **Windows** | `lx-music-plus-v…-x64-Setup.exe` | Not code signed: Windows SmartScreen may warn the first time you open it |
-| **Linux**, any distribution | `.AppImage` (x64, arm64) | No install: make it executable, then run it. It updates itself. Ubuntu 22.04 and later need FUSE 2 (`sudo apt install libfuse2`, or `libfuse2t64` on 24.04) |
-| **Debian, Ubuntu, Mint, Pop!_OS** | `.deb` (amd64, arm64) | `sudo apt install ./lx-music-plus_…_amd64.deb` |
-| **Fedora, openSUSE, RHEL** | `.rpm` (x86_64, aarch64) | `sudo dnf install ./lx-music-plus-….rpm` |
-| **Arch, Manjaro, EndeavourOS** | `.pacman` (x64, arm64) | `sudo pacman -U lx-music-plus-….pacman` |
+| **Windows** | `lx-music-plus-setup-v…-x64.exe` | Not code signed: Windows SmartScreen may warn the first time you open it |
 | **Android** | `arm64-v8a` APK for most phones, `universal` if unsure | |
+| **Debian, Ubuntu, Mint, Pop!_OS** | `.deb` (amd64, arm64) | `sudo apt install ./lx-music-plus_v…_debian_amd64.deb` |
+| **Linux**, any distribution | `.AppImage` (amd64, arm64) | No install: make it executable, then run it. It updates itself. Ubuntu 22.04 and later need FUSE 2 (`sudo apt install libfuse2`, or `libfuse2t64` on 24.04) |
+| **Arch, Manjaro, EndeavourOS** | `.pacman` (amd64, arm64) | `sudo pacman -U lx-music-plus_v…_pacman_amd64.pacman` |
+| **Fedora, openSUSE, RHEL** | `.rpm` (amd64, arm64) | `sudo dnf install ./lx-music-plus_v…_rpm_amd64.rpm` |
 
 ## Getting started
 

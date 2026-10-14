@@ -163,13 +163,15 @@ const createTarget = {
   win(arch, packageType) {
     switch (packageType) {
       case 'setup':
-        winOptions.artifactName = `\${productName}-v\${version}-${arch}-Setup.\${ext}`
+        // (the files of a release are listed by name: lx-music-plus-setup-… (windows) first, lx-music-plus-v… (android:
+        // the name its update looks for), lx-music-plus_… (linux) last)
+        winOptions.artifactName = `\${productName}-setup-v\${version}-${arch}.\${ext}`
         return {
           buildOptions: { win: ['nsis'] },
           options: winOptions,
         }
       case 'green':
-        winOptions.artifactName = `\${productName}-v\${version}-win_${arch}-green.\${ext}`
+        winOptions.artifactName = `\${productName}-windows-v\${version}-${arch}-green.\${ext}`
         return {
           buildOptions: { win: ['7z'] },
           options: winOptions,
@@ -187,7 +189,7 @@ const createTarget = {
           options: winOptions,
         }
       case 'portable':
-        winOptions.artifactName = `\${productName}-v\${version}-${arch}-portable.\${ext}`
+        winOptions.artifactName = `\${productName}-windows-v\${version}-${arch}-portable.\${ext}`
         return {
           buildOptions: { win: ['portable'] },
           options: winOptions,
@@ -202,14 +204,11 @@ const createTarget = {
    * @returns {{ buildOptions: import('electron-builder').CliOptions, options: import('electron-builder').Configuration }}
    */
   linux(arch, packageType) {
+    // the files of a release are listed by name: after the ones of windows and android ("_"), the packages the most
+    // used first (deb, AppImage, pacman, rpm), x64 (amd64) before arm64
     const debArch = arch == 'x64' ? 'amd64' : arch
-    const rpmArch = arch == 'x64' ? 'x86_64' : 'aarch64'
-    const names = {
-      AppImage: `\${productName}_\${version}_${arch}.\${ext}`,
-      deb: `\${productName}_\${version}_${debArch}.\${ext}`,
-      rpm: `\${productName}-\${version}.${rpmArch}.\${ext}`,
-      pacman: `\${productName}-\${version}-${arch}.\${ext}`,
-    }
+    const name = (kind) => `\${productName}_v\${version}_${kind}_${debArch}.\${ext}`
+    const names = { deb: name('debian'), AppImage: name('linux'), pacman: name('pacman'), rpm: name('rpm') }
     const types = {
       appImage: ['AppImage'],
       deb: ['deb'],
