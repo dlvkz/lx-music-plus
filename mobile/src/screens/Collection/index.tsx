@@ -10,7 +10,8 @@ import { type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native'
 import { STICKY_OFFSET } from '@/components/common/StickyBanner'
 import { getListMusicPic } from '@/utils/listMusicPic'
 import SongPic from '@/components/common/SongPic'
-import { ActionRow, BackButton, CollectButton, DownloadButton, PlayButton } from '@/components/common/ActionIcons'
+import { ActionRow, BackButton, CollectButton, DownloadButton, PlayButton, RadioButton } from '@/components/common/ActionIcons'
+import { fmState, onFmStateChanged, startSeedRadio } from '@/core/recommend'
 import { useCollections, getCollectionKey, toggleCollection, updateCollection } from '@/core/collect'
 import { TranslatedText } from '@/components/common/TranslatedText'
 import { memo, useCallback, useEffect, useState } from 'react'
@@ -135,6 +136,25 @@ export default memo(({ componentId, info }: { componentId: string, info: Collect
       void playList(LIST_IDS.TEMP, index)
     })
   }, [data, info])
+  // the radio of the artist / the album: its songs mixed with the songs like them (core/recommend.ts)
+  const [isRadioLoading, setRadioLoading] = useState(fmState.loading)
+  useEffect(() => onFmStateChanged(state => { setRadioLoading(state.loading) }), [])
+  const hasRadio = info.type == 'artist' || info.type == 'album'
+  const handleRadio = useCallback(() => {
+    const name = (data?.title ? data.title : info.name) ?? ''
+    if (info.type == 'artist') {
+      const artist = normalizeArtistName(name)
+      if (!artist) return
+      void startSeedRadio({ type: 'artist', name: artist, songs: data?.list ?? [] }, { kind: 'collection', info }).then(isStarted => {
+        if (!isStarted) toast(t('artist__radio_failed'))
+      })
+      return
+    }
+    if (!data?.list.length) return
+    void startSeedRadio({ type: 'list', name, songs: data.list }, { kind: 'collection', info }).then(isStarted => {
+      if (!isStarted) toast(t('artist__radio_failed'))
+    })
+  }, [data, info, t])
   // a ring around the download button shows how far the downloads of the album have gone
   const downloadState = useDownloadState(data?.list)
   const handleDownload = useCallback(() => {
@@ -208,6 +228,7 @@ export default memo(({ componentId, info }: { componentId: string, info: Collect
           <ActionRow
             left={isArtist ? null : <DownloadButton disabled={!list.length} done={downloadState.done} downloading={downloadState.downloading} progress={downloadState.progress} partial={downloadState.partial} onPress={handleDownload} />}
             right={<>
+              { hasRadio ? <RadioButton disabled={(!list.length && !isArtist) || isRadioLoading} onPress={handleRadio} /> : null }
               { collectedId ? <CollectButton collected={isCollected} disabled={status != 'done'} onPress={handleCollect} /> : null }
               <PlayButton disabled={!list.length} onPress={() => { handlePlay(0) }} />
             </>}

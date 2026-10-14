@@ -43,7 +43,8 @@ const handleVisible = (visible) => {
   cursor: pointer;
   transition: color @transition-normal;
   svg {
-    opacity: 0.5;
+    // (raised over a dynamic background that needs it: core/coverTone.ts)
+    opacity: var(--secondary-icon-opacity, 0.5);
     transition: @transition-fast;
     transition-property: opacity, color;
   }

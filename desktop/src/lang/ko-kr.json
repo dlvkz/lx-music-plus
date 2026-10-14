@@ -374,6 +374,8 @@
   "search__type_album": "앨범",
   "stats__title": "통계",
   "artist__similar": "비슷한 아티스트",
+  "artist__radio": "라디오",
+  "artist__radio_failed": "이 라디오에 재생할 곡을 찾지 못했습니다",
   "home__for_you_artists": "추천 아티스트",
   "home__for_you_because": "{names}을(를) 들으셔서",
   "setting__lastfm": "Last.fm",

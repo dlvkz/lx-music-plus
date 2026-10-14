@@ -13,7 +13,8 @@ import { useTheme } from '@/store/theme/hook'
 import { useActiveListId, useMyList } from '@/store/list/hook'
 import { setLibraryListOpened, setLibraryListScrolled, useLibraryListScrolled } from '@/store/libraryView'
 import { playList } from '@/core/player/player'
-import { ActionRow, BackButton, DownloadButton, IconButton, PlayButton } from '@/components/common/ActionIcons'
+import { ActionRow, BackButton, DownloadButton, IconButton, PlayButton, RadioButton } from '@/components/common/ActionIcons'
+import { fmState, onFmStateChanged, startSeedRadio } from '@/core/recommend'
 import { hasListCover, setListCover } from '@/utils/listCover'
 import { getListMusicPic } from '@/utils/listMusicPic'
 import { useSettingValue } from '@/store/setting/hook'
@@ -173,6 +174,17 @@ const ListHeader = memo(({ onBack, onMenu }: { onBack: () => void, onMenu: (item
   useEffect(() => {
     setLibraryListScrolled(false)
   }, [listId])
+  // the radio of the list: its songs mixed with the songs like them (core/recommend.ts)
+  const [isRadioLoading, setRadioLoading] = useState(fmState.loading)
+  useEffect(() => onFmStateChanged(state => { setRadioLoading(state.loading) }), [])
+  const handleRadio = () => {
+    void getListMusics(listId).then(async list => {
+      if (!list.length) return true
+      return startSeedRadio({ type: 'list', name, songs: [...list] as LX.Music.MusicInfoOnline[] }, { kind: 'list', id: listId })
+    }).then(isStarted => {
+      if (!isStarted) toast(t('artist__radio_failed'))
+    })
+  }
   const handlePlay = () => {
     if (info.count) void playList(listId, 0)
   }
@@ -220,7 +232,10 @@ const ListHeader = memo(({ onBack, onMenu }: { onBack: () => void, onMenu: (item
           <Text size={13} color={theme['c-font-label']}>{t('collection__songs', { num: info.count })}</Text>
           <ActionRow
             left={<DownloadButton active={isSync} done={downloadState.done} downloading={downloadState.downloading} progress={downloadState.progress} partial={downloadState.partial} onPress={toggleSync} />}
-            right={<PlayButton onPress={handlePlay} disabled={!info.count} />}
+            right={<>
+              <RadioButton onPress={handleRadio} disabled={!info.count || isRadioLoading} />
+              <PlayButton onPress={handlePlay} disabled={!info.count} />
+            </>}
           />
         </View>
       </View>

@@ -1,8 +1,7 @@
 // import musicSdk from '@/utils/musicSdk'
 // import commonActions from '@/store/common/action'
-import playerState from '@/store/player/state'
 import settingState from '@/store/setting/state'
-import { prefetch } from '@/components/common/ImageBackground'
+import { formatPicUri, getDisplayPic, onDisplayPicChanged } from '@/core/displayPic'
 import { setBgPic } from '@/core/common'
 
 // const handleUpdateSourceNmaes = () => {
@@ -22,9 +21,6 @@ import { setBgPic } from '@/core/common'
 //   }
 //   commonActions.setSourceNames(sourceNames)
 // }
-const formatUri = <T extends string | null>(url: T) => {
-  return (typeof url == 'string' && url.startsWith('/')) ? `file://${url}` : url
-}
 
 export default async(setting: LX.AppSetting) => {
   // const handleConfigUpdated = (keys: Array<keyof LX.AppSetting>, setting: Partial<LX.AppSetting>) => {
@@ -32,41 +28,20 @@ export default async(setting: LX.AppSetting) => {
   //   handleConfigUpdate(keys, setting)
   // }
 
-  let pic = playerState.musicInfo.pic
-  // the cover is loaded when the player or the menus use it (PageContent, PlayerBar)
+  // the cover is loaded when the player or the menus use it (PageContent, PlayerBar): the cover shown, which stays
+  // until the one of the next song is loaded (core/displayPic.ts)
   let isDynamicBg = setting['theme.dynamicBg'] || setting['playDetail.isDynamicBg']
-  const handleUpdatePic = (pic: string) => {
-    if (!pic) return
-    const picUrl = formatUri(pic)
-    void prefetch(picUrl).then(() => {
-      if (pic != playerState.musicInfo.pic || !isDynamicBg) return
-      setBgPic(picUrl)
-    })
-  }
-  const handlePicUpdate = () => {
-    if (playerState.musicInfo.pic && playerState.musicInfo.pic != playerState.loadErrorPicUrl) {
-      // if (playerState.musicInfo.pic != playerState.loadErrorPicUrl) {
-      pic = playerState.musicInfo.pic
-      if (!isDynamicBg) return
-      handleUpdatePic(pic)
-      // .catch(() => {
-      //   if (pic != playerState.musicInfo.pic) return
-      //   setBgPic(null)
-      // })
-    }
-    // } else {
-    //   if (!isDynamicBg) return
-    //   setPic(null)
-    // }
+  const applyPic = (pic: string | null) => {
+    if (!isDynamicBg) return
+    setBgPic(pic ? formatPicUri(pic) : null)
   }
   const handleConfigUpdate = (keys: Array<keyof LX.AppSetting>, setting: Partial<LX.AppSetting>) => {
     if (!keys.includes('theme.dynamicBg') && !keys.includes('playDetail.isDynamicBg')) return
     isDynamicBg = settingState.setting['theme.dynamicBg'] || settingState.setting['playDetail.isDynamicBg']
-    if (isDynamicBg) {
-      if (pic) handleUpdatePic(pic)
-    } else setBgPic(null)
+    if (isDynamicBg) applyPic(getDisplayPic())
+    else setBgPic(null)
   }
-  handlePicUpdate()
-  global.state_event.on('playerMusicInfoChanged', handlePicUpdate)
+  applyPic(getDisplayPic())
+  onDisplayPicChanged(applyPic)
   global.state_event.on('configUpdated', handleConfigUpdate)
 }

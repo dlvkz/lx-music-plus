@@ -99,3 +99,8 @@ export const requestIgnoreBatteryOptimization = async() => new Promise<boolean>(
     resolve(false)
   })
 })
+
+/**
+ * The lightness (L*, 0 - 1) of an image (a file or an url): its average, its light parts, its dark parts
+ */
+export const getImageLightness = async(url: string): Promise<{ mean: number, light: number, dark: number }> => UtilsModule.getImageLightness(url)

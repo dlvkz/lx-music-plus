@@ -2,14 +2,15 @@
 import { Dimensions, View } from 'react-native'
 import { useTheme } from '@/store/theme/hook'
 import ImageBackground from '@/components/common/ImageBackground'
+import CoverBackground from '@/components/common/CoverBackground'
 import { useKeyboard, useWindowSize } from '@/utils/hooks'
 import { useEffect, useMemo, useState } from 'react'
 import { getNavBarHeight } from '@/utils/navBar'
 import { scaleSizeAbsHR } from '@/utils/pixelRatio'
-import { defaultHeaders } from './common/Image'
 import SizeView from './SizeView'
 import { useBgPic } from '@/store/common/hook'
 import { useSettingValue } from '@/store/setting/hook'
+import { useCoverOverlay } from '@/core/coverTone'
 
 interface Props {
   children: React.ReactNode
@@ -49,6 +50,8 @@ export default ({ children, navBarColor, player = false }: Props) => {
   const isPlayerDynamicBg = useSettingValue('playDetail.isDynamicBg')
   const isMenuDynamicBg = useSettingValue('theme.dynamicBg')
   const pic = (player ? isPlayerDynamicBg : isMenuDynamicBg) ? bgPic : null
+  // the player: more of the color of the theme over a cover far from it (core/coverTone.ts)
+  const overlay = useCoverOverlay(player ? pic : null, 0.76)
   // const [wh, setWH] = useState<{ width: number | string, height: number | string }>({ width: '100%', height: Dimensions.get('screen').height })
 
   // 固定宽高度 防止弹窗键盘时大小改变导致背景被缩放
@@ -86,21 +89,21 @@ export default ({ children, navBarColor, player = false }: Props) => {
   const picComponent = useMemo(() => {
     return (
       <View style={{ flex: 1, overflow: 'hidden' }}>
-        <ImageBackground
+        {/* (the cover before stays until the new one is drawn) */}
+        <CoverBackground
           style={{ position: 'absolute', left: 0, top: 0, height: windowSize.height + getNavBarHeight(), width: windowSize.width, backgroundColor: theme['c-content-background'] }}
-          source={{ uri: pic!, headers: defaultHeaders }}
-          resizeMode="cover"
+          uri={pic!}
           blurRadius={BLUR_RADIUS}
         >
-          <View style={{ flex: 1, flexDirection: 'column', backgroundColor: theme['c-content-background'], opacity: 0.76 }}></View>
-        </ImageBackground>
+          <View style={{ flex: 1, flexDirection: 'column', backgroundColor: theme['c-content-background'], opacity: overlay }}></View>
+        </CoverBackground>
         <View style={{ flex: 1, flexDirection: 'column' }}>
           {children}
           <NavBarSpacer color={navBarColor} />
         </View>
       </View>
     )
-  }, [children, navBarColor, pic, theme, windowSize.height, windowSize.width])
+  }, [children, navBarColor, overlay, pic, theme, windowSize.height, windowSize.width])
 
   return (
     <>

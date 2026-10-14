@@ -1,11 +1,12 @@
 <template>
   <div :class="$style.cover">
-    <base-image :src="musicInfo.pic" />
+    <base-image :src="displayPic" />
   </div>
 </template>
 
 <script setup>
-import { musicInfo } from '@renderer/store/player/state'
+// (the cover shown: the one before stays until the new one is loaded)
+import { displayPic } from '@renderer/core/displayPic'
 // Ported from Any Listen: components/layout/PlayDetail/LeftInfo/CoverSquare.svelte
 </script>
 

@@ -63,7 +63,7 @@ const defaultSetting: LX.AppSetting = {
   'playDetail.horizontal.style.lrcFontSize': 220,
   'playDetail.isShowLyricProgressSetting': false,
   // the cover of the song playing as the background of the player and the play bar (the menus: theme.dynamicBg)
-  'playDetail.isDynamicBg': false,
+  'playDetail.isDynamicBg': true,
   // the cover of the player: a turning disc (CD, the default as on the desktop app) or a square, a tap switches
   'playDetail.isDiscCover': true,
 

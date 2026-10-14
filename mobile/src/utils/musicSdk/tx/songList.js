@@ -26,6 +26,8 @@ export default {
       id: '2',
     },
   ],
+  // (the hot / new sorts are categories themselves: a category has no order)
+  isSortWithTag: false,
   regExps: {
     hotTagHtml: /class="c_bg_link js_tag_item" data-id="\w+">.+?<\/a>/g,
     hotTag: /data-id="(\w+)">(.+?)<\/a>/,

@@ -1,6 +1,6 @@
 {
   "name": "lx-music-plus",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "LX Music+: an unofficial fork of LX Music",
   "desktopName": "lx-music-plus.desktop",
   "main": "./dist/main.js",

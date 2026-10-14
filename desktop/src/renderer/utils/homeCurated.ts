@@ -127,17 +127,25 @@ export const getMixedArtists = async(netease: HomeArtist[], limit = 16): Promise
 }
 
 /**
- * Artists for the user: the ones similar to the artists they listen to the most (Last.fm, else Deezer), the
- * ones similar to several of them first, without the ones they already listen to
+ * Artists for the user: the ones similar to artists they listen to (Last.fm, else Deezer), the ones similar to several
+ * of them first, without the ones they already listen to. A different pick every time: the artists it starts from
+ * are drawn among the ones the user listens to (the first ones more likely), the order has some chance in it
  * @param topArtists the artists the user listens to the most, the first ones first
  */
-export const getArtistsForYou = async(topArtists: string[], limit = 14): Promise<{ seeds: string[], list: HomeArtist[] }> => {
-  const seeds = topArtists.slice(0, 4)
+export const getArtistsForYou = async(topArtists: string[], limit = 14, seedCount = 4): Promise<{ seeds: string[], list: HomeArtist[] }> => {
   const keyOf = (name: string) => normalizeArtistName(name).toLowerCase()
   const known = new Set(topArtists.map(keyOf))
-  const lists = await Promise.all(seeds.map(async name => settle(getSimilarArtists(name, 20))))
+  const pool = topArtists.map((name, index) => ({ name, weight: 1 / (1 + index * 0.35) }))
+  const seeds: string[] = []
+  while (seeds.length < seedCount && pool.length) {
+    let target = Math.random() * pool.reduce((sum, item) => sum + item.weight, 0)
+    let index = pool.findIndex(item => (target -= item.weight) <= 0)
+    if (index < 0) index = pool.length - 1
+    seeds.push(pool.splice(index, 1)[0].name)
+  }
+  const lists = await Promise.all(seeds.map(async name => settle(getSimilarArtists(name, 30))))
   // a seed whose similar artists have nothing in common with the ones of the others (or with the artists of the
-  // user) is likely another artist of the same name: its artists come last
+  // user) is likely another artist of the same name: it is left out
   const keysOf = lists.map(list => new Set(list.map(artist => keyOf(artist.name))))
   const isConsistent = lists.map((list, index) => {
     if (seeds.length < 2) return true
@@ -146,22 +154,23 @@ export const getArtistsForYou = async(topArtists: string[], limit = 14): Promise
       return known.has(key) || keysOf.some((keys, other) => other != index && keys.has(key))
     })
   })
-  const seedCount = new Map<string, number>()
-  for (const keys of keysOf) for (const key of keys) seedCount.set(key, (seedCount.get(key) ?? 0) + 1)
 
-  const result: Array<{ name: string, img: string | null }> = []
-  const added = new Set<string>()
-  const add = (artist: { name: string, img: string | null }) => {
-    const key = keyOf(artist.name)
-    if (known.has(key) || added.has(key) || result.length >= limit) return
-    added.add(key)
-    result.push({ name: artist.name, img: artist.img })
-  }
-  // the artists similar to several of the artists of the user first, then the ones of each artist in turns
-  const all = lists.flatMap((list, index) => isConsistent[index] ? list : [])
-  for (const artist of all.filter(artist => (seedCount.get(keyOf(artist.name)) ?? 0) > 1).sort((a, b) => b.match - a.match)) add(artist)
-  for (const artist of interleave(lists.filter((_, index) => isConsistent[index]), artist => keyOf(artist.name), limit * 2)) add(artist)
-  for (const artist of interleave(lists.filter((_, index) => !isConsistent[index]), artist => keyOf(artist.name), limit)) add(artist)
+  // score: how similar, more for an artist similar to several of the seeds, times some chance
+  const scores = new Map<string, { name: string, img: string | null, score: number }>()
+  lists.forEach((list, index) => {
+    if (!isConsistent[index]) return
+    for (const artist of list) {
+      const key = keyOf(artist.name)
+      if (known.has(key)) continue
+      const item = scores.get(key)
+      if (item) item.score += 0.6 + artist.match
+      else scores.set(key, { name: artist.name, img: artist.img, score: 0.4 + artist.match })
+    }
+  })
+  const ranked = Array.from(scores.values())
+  for (const item of ranked) item.score *= 0.6 + Math.random() * 0.8
+  ranked.sort((a, b) => b.score - a.score)
+  const result = ranked.slice(0, limit).map(item => ({ name: item.name, img: item.img }))
   // the pictures (Last.fm has none): Deezer
   await Promise.all(result.map(async item => {
     if (!item.img) item.img = await getArtistPicture(item.name)

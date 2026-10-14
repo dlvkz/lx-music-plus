@@ -77,6 +77,8 @@ export type Source = LX.OnlineSource
 export interface InitState {
   sources: Source[]
   sortList: Partial<Record<Source, SortInfo[]>>
+  /** false: the sorts don't apply to the playlists of a category (kw, tx) */
+  sortWithTag: Partial<Record<Source, boolean>>
   tags: Tags
   listInfo: ListInfo
   listDetailInfo: ListDetailInfo
@@ -86,6 +88,7 @@ export interface InitState {
 const state: InitState = {
   sources: [],
   sortList: {},
+  sortWithTag: {},
   tags: {},
   listInfo: {
     list: [],
@@ -118,6 +121,7 @@ for (const source of music.sources) {
   if (!songList) continue
   state.sources.push(source.id as Source)
   state.sortList[source.id as Source] = songList.sortList as SortInfo[]
+  state.sortWithTag[source.id as Source] = (songList as { isSortWithTag?: boolean }).isSortWithTag !== false
 }
 
 

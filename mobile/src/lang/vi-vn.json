@@ -288,6 +288,8 @@
   "search_type_album": "Album",
   "stats__title": "Thống kê",
   "artist__similar": "Nghệ sĩ tương tự",
+  "artist__radio": "Radio",
+  "artist__radio_failed": "Không tìm thấy bài hát cho radio này",
   "home__for_you_artists": "Nghệ sĩ dành cho bạn",
   "home__for_you_because": "Vì bạn nghe {names}",
   "setting_lastfm": "Last.fm",

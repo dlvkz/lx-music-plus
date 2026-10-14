@@ -1,6 +1,7 @@
 import { StyleSheet, TouchableOpacity } from 'react-native'
 import { navigations } from '@/navigation'
 import { usePlayerMusicInfo } from '@/store/player/hook'
+import { useDisplayPic } from '@/core/displayPic'
 import { scaleSizeH } from '@/utils/pixelRatio'
 import commonState from '@/store/common/state'
 import playerState from '@/store/player/state'
@@ -21,6 +22,8 @@ const styles = StyleSheet.create({
 
 export default ({ isHome }: { isHome: boolean }) => {
   const musicInfo = usePlayerMusicInfo()
+  // (the cover before stays until the new one is loaded)
+  const displayPic = useDisplayPic()
   const handlePress = () => {
     // console.log('')
     // console.log(playMusicInfo)
@@ -46,7 +49,7 @@ export default ({ isHome }: { isHome: boolean }) => {
 
   return (
     <TouchableOpacity onLongPress={handleLongPress} onPress={handlePress} activeOpacity={0.7} >
-      <Image url={musicInfo.pic} nativeID={NAV_SHEAR_NATIVE_IDS.playDetail_pic} style={styles.image} onError={handleError} />
+      <Image url={displayPic} nativeID={NAV_SHEAR_NATIVE_IDS.playDetail_pic} style={styles.image} onError={handleError} />
     </TouchableOpacity>
   )
 }

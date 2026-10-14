@@ -14,6 +14,8 @@ import { hasDislike } from '@renderer/core/dislikeList'
 import { assertApiSupport } from '@renderer/store/utils'
 import { playList } from '@renderer/core/player/action'
 import { RADIO_LIST_ID } from '@renderer/core/player/playMethod'
+import { setPlayingFrom, type PlayingFromRoute } from '@renderer/store/list/playingFrom'
+import { appSetting } from '@renderer/store/setting'
 
 // Local recommendations: no account involved.
 // A taste profile is built from the loved list, the play history and a local play log,
@@ -77,11 +79,18 @@ interface Profile {
   songSeeds: Array<Weighted<LX.Music.MusicInfo>>
   knownIds: Set<string>
   knownKeys: Set<string>
+  /** the songs the user knows (loved / played), the recent ones weigh more */
+  familiar: Array<Weighted<LX.Music.MusicInfo>>
 }
 
 const LOVE_WEIGHT = 3
 const HISTORY_WEIGHT = 2
 const HISTORY_DECAY = 60
+// the songs the user knows: weight of the recent ones, how fast it goes down with the age (songs), the songs
+// just played that are left out
+const FAMILIAR_DECAY = 40
+const FAMILIAR_MIN_WEIGHT = 0.02
+const FAMILIAR_SKIP_RECENT = 5
 
 const buildProfile = async(): Promise<Profile> => {
   const [loved, history] = await Promise.all([getListMusics(LIST_IDS.LOVE), getListMusics(LIST_IDS.DEFAULT)])
@@ -111,10 +120,29 @@ const buildProfile = async(): Promise<Profile> => {
     weights.set(name, (weight + 0.5 * Math.min(log.p, 10)) * (1 - Math.min(0.6, skipRate)))
   }
 
+  // the play history is newest first, the loved list in the order songs are added to it
+  const familiarMap = new Map<string, Weighted<LX.Music.MusicInfo>>()
+  const justPlayed = new Set(history.slice(0, FAMILIAR_SKIP_RECENT).map(getKey))
+  const addFamiliar = (m: LX.Music.MusicInfo, weight: number) => {
+    const key = getKey(m)
+    if (justPlayed.has(key)) return
+    const prev = familiarMap.get(key)
+    if (prev) prev.weight += weight
+    else familiarMap.set(key, { item: m, weight })
+  }
+  history.forEach((m, index) => {
+    addFamiliar(m, Math.max(FAMILIAR_MIN_WEIGHT, Math.exp(-index / FAMILIAR_DECAY)))
+  })
+  const lovedNewestFirst = appSetting['list.addMusicLocationType'] == 'bottom' ? [...loved].reverse() : loved
+  lovedNewestFirst.forEach((m, index) => {
+    addFamiliar(m, 0.8 * Math.max(FAMILIAR_MIN_WEIGHT, Math.exp(-index / (FAMILIAR_DECAY * 2))))
+  })
+  const familiar = Array.from(familiarMap.values())
+
   const artists = Array.from(weights, ([item, weight]) => ({ item, weight })).sort((a, b) => b.weight - a.weight)
   const max = artists[0]?.weight ?? 1
   const affinity = new Map(artists.map(a => [a.item, a.weight / max]))
-  return { artists, affinity, seeds, songSeeds, knownIds, knownKeys }
+  return { artists, affinity, seeds, songSeeds, knownIds, knownKeys, familiar }
 }
 
 const weightedSample = <T>(list: Array<Weighted<T>>, count: number): Array<Weighted<T>> => {
@@ -205,6 +233,8 @@ interface Options {
   /** how many songs of the user give their similar songs, how many of its artists give similar artists */
   discoverySeedCount?: number
   similarArtistCount?: number
+  /** songs the user knows added to the new ones (the radio) */
+  familiarCount?: number
   count: number
   artistCount: number
   seedCount: number
@@ -212,7 +242,7 @@ interface Options {
   exclude?: Set<string>
 }
 
-const generate = async({ count, artistCount, seedCount, maxPerArtist, exclude, seedSongs = [], discoverySeedCount = 0, similarArtistCount = 0 }: Options): Promise<Music[]> => {
+const generate = async({ count, artistCount, seedCount, maxPerArtist, exclude, seedSongs = [], discoverySeedCount = 0, similarArtistCount = 0, familiarCount = 0 }: Options): Promise<Music[]> => {
   const profile = await buildProfile()
   if (!profile.artists.length) return []
 
@@ -290,8 +320,131 @@ const generate = async({ count, artistCount, seedCount, maxPerArtist, exclude, s
     result.push(music)
     if (result.length >= count) break
   }
+  // some songs the user knows, the recent ones more likely
+  if (familiarCount) {
+    const familiar = profile.familiar.filter(({ item }) => !exclude?.has(item.id) && !hasDislike(item))
+    for (const { item } of weightedSample(familiar, familiarCount)) result.push(item as Music)
+  }
   // strongest guesses are spread out instead of being played first
   return result.sort(() => Math.random() - 0.5)
+}
+
+/* ---------- radio of an artist / a list ---------- */
+
+// The radio of an artist (its page), a playlist or an album: their songs mixed with the songs like them (Last.fm, else
+// the artist radio of Deezer) and the best songs of the similar artists; after that the song playing leads it too
+export interface RadioSeed {
+  type: 'artist' | 'list'
+  /** the artist, the name of the list */
+  name: string
+  /** the songs of the artist page / of the list (an artist without them: the ones of the main sources) */
+  songs: Music[]
+}
+const SEED_RADIO_COUNT = 10
+const SEED_RADIO_OWN = 4
+const SEED_RADIO_SEEDS = 2
+const SEED_RADIO_SIMILAR_ARTISTS = 3
+const SEED_RADIO_MAX_SONGS = 300
+
+const generateSeedRadio = async(seed: RadioSeed, exclude: Music[], seedSongs: LX.Music.MusicInfo[] = []): Promise<Music[]> => {
+  const excludeIds = new Set(exclude.map(m => m.id))
+  const excludeKeys = new Set(exclude.map(getKey))
+  const isArtist = seed.type == 'artist'
+  const listKeys = new Set(seed.songs.map(getKey))
+  // a song of the artist (a song with the artist featured too), a song of the list
+  const isOwn = isArtist
+    ? (music: Music) => getArtists(music.singer).some(name => isSameArtist(name, seed.name))
+    : (music: Music) => listKeys.has(getKey(music))
+
+  const scores = new Map<string, { music: Music, score: number }>()
+  const addCandidate = (music: Music, score: number) => {
+    const key = getKey(music)
+    if (excludeIds.has(music.id) || excludeKeys.has(key) || hasDislike(music)) return
+    // songs of a source the music api can't play need a match on another source, which can fail
+    if (!assertApiSupport(music.source)) score *= 0.6
+    const prev = scores.get(key)
+    if (prev) prev.score += score * 0.4
+    else scores.set(key, { music, score })
+  }
+
+  const own = isArtist && !seed.songs.length ? await getArtistSongs(seed.name).catch(() => [] as Music[]) : seed.songs.slice(0, SEED_RADIO_MAX_SONGS)
+  // the songs of an artist are ordered by popularity, the ones of a list are all alike
+  const popular = isArtist ? own.slice(0, 60) : own
+  popular.forEach((music, index) => {
+    addCandidate(music, isArtist ? 0.7 * (1 - 0.5 * index / popular.length) : 0.6)
+  })
+  const seeds = [
+    ...seedSongs,
+    ...weightedSample(popular.slice(0, isArtist ? 15 : popular.length).map((item, index) => ({ item, weight: isArtist ? 1 - index / 20 : 1 })), SEED_RADIO_SEEDS).map(i => i.item),
+  ]
+  // the artists the similar ones are looked for from: the artist, the artists of the list (the most present ones
+  // more likely)
+  const listArtists = new Map<string, number>()
+  if (!isArtist) for (const music of own) for (const name of getArtists(music.singer)) listArtists.set(name, (listArtists.get(name) ?? 0) + 1)
+  const fromArtists = isArtist
+    ? [seed.name]
+    : weightedSample(Array.from(listArtists, ([item, weight]) => ({ item, weight })).sort((a, b) => b.weight - a.weight).slice(0, 12), 2).map(i => i.item)
+  await Promise.all([
+    // the songs similar to the songs of the artist / of the list, found on the main sources
+    ...seeds.map(async seedSong => {
+      const similar = await getSimilarTracks(seedSong.name, getArtists(seedSong.singer)[0] ?? seed.name, SIMILAR_TRACKS_PER_SEED * 2)
+      const picked = [...similar.slice(0, SIMILAR_TRACKS_PER_SEED), ...weightedSample(similar.slice(SIMILAR_TRACKS_PER_SEED).map(item => ({ item, weight: item.match + 0.05 })), 3).map(i => i.item)]
+      const songs = await matchTracks(picked, matchSearch, MATCH_SOURCES, s => assertApiSupport(s as LX.Source))
+      for (const music of songs) {
+        const match = picked.find(track => track.name.toLowerCase() == music.name.toLowerCase())?.match ?? 0.5
+        addCandidate(music, 0.5 + 0.4 * match)
+      }
+    }).map(async task => task.catch((err: unknown) => {
+      console.log(err)
+    })),
+    // the best songs of the similar artists
+    ...fromArtists.map(async name => {
+      const similar = (await getSimilarArtists(name, 15)).filter(artist => !listArtists.has(artist.name))
+      const chosen = weightedSample(similar.map(artist => ({ item: artist, weight: artist.match + 0.1 })), isArtist ? SEED_RADIO_SIMILAR_ARTISTS : 2)
+      await Promise.all(chosen.map(async({ item: artist }) => {
+        const songs = (await getArtistSongs(artist.name)).slice(0, SIMILAR_ARTIST_SONGS)
+        songs.forEach((music, index) => {
+          addCandidate(music, (0.35 + 0.35 * artist.match) * (1 - 0.3 * index / songs.length))
+        })
+      }))
+    }).map(async task => task.catch((err: unknown) => {
+      console.log(err)
+    })),
+    // a list: other songs of its artists
+    ...(isArtist ? [] : fromArtists.slice(0, 1)).map(async name => {
+      const songs = (await getArtistSongs(name)).slice(0, SIMILAR_ARTIST_SONGS)
+      songs.forEach((music, index) => {
+        addCandidate(music, 0.45 * (1 - 0.3 * index / songs.length))
+      })
+    }).map(async task => task.catch((err: unknown) => {
+      console.log(err)
+    })),
+  ])
+
+  const ranked = Array.from(scores.values())
+  for (const item of ranked) item.score *= 0.75 + Math.random() * 0.5
+  ranked.sort((a, b) => b.score - a.score)
+
+  const ownPicked: Music[] = []
+  const others: Music[] = []
+  const artistCounts = new Map<string, number>()
+  for (const { music } of ranked) {
+    if (isOwn(music)) {
+      if (ownPicked.length < SEED_RADIO_OWN) ownPicked.push(music)
+      continue
+    }
+    if (others.length >= SEED_RADIO_COUNT - SEED_RADIO_OWN) continue
+    const names = getArtists(music.singer)
+    if (names.some(name => (artistCounts.get(name) ?? 0) >= 2)) continue
+    for (const name of names) artistCounts.set(name, (artistCounts.get(name) ?? 0) + 1)
+    others.push(music)
+  }
+  // not enough similar songs found: more of the artist / of the list
+  const missing = SEED_RADIO_COUNT - ownPicked.length - others.length
+  if (missing > 0) ownPicked.push(...ranked.filter(({ music }) => isOwn(music) && !ownPicked.includes(music)).slice(0, missing).map(i => i.music))
+  if (!ownPicked.length) return others.sort(() => Math.random() - 0.5)
+  // a song of the artist / of the list first, the rest spread out
+  return [ownPicked[0], ...[...ownPicked.slice(1), ...others].sort(() => Math.random() - 0.5)]
 }
 
 /* ---------- daily mix ---------- */
@@ -334,15 +487,31 @@ export const playDailyMix = async(list: Music[], index = 0) => {
 
 // (the radio plays in order: core/player/playMethod.ts)
 const FM_LIST_ID = RADIO_LIST_ID
-const FM_BATCH = { count: 8, artistCount: 3, seedCount: 2, maxPerArtist: 2, discoverySeedCount: 1, similarArtistCount: 1 }
+// mostly new songs, some the user knows
+const FM_BATCH = { count: 7, familiarCount: 3, artistCount: 3, seedCount: 2, maxPerArtist: 2, discoverySeedCount: 1, similarArtistCount: 1 }
 const FM_REFILL_REMAINING = 3
 
+const RADIO_SEED_KEY = 'lx_radio_seed_v1'
+let fmSeed: RadioSeed | null = null
+try {
+  fmSeed = JSON.parse(localStorage.getItem(RADIO_SEED_KEY) ?? 'null')
+} catch {}
 export const fmState = reactive({
   active: false,
   loading: false,
+  /** what the radio is made from (an artist, a playlist, an album), empty: the radio of the user */
+  seed: fmSeed?.name ?? '',
 })
 let fmQueue: Music[] = []
 let isFilling = false
+const setFmSeed = (seed: RadioSeed | null) => {
+  fmSeed = seed
+  fmState.seed = seed?.name ?? ''
+  try {
+    // (the songs of a list are kept for the radio after a restart, an artist finds its own again)
+    localStorage.setItem(RADIO_SEED_KEY, JSON.stringify(seed ? { ...seed, songs: seed.type == 'list' ? seed.songs.slice(0, SEED_RADIO_MAX_SONGS) : [] } : null))
+  } catch {}
+}
 
 const isFmList = () => playMusicInfo.listId == LIST_IDS.TEMP && tempListMeta.id == FM_LIST_ID
 
@@ -355,15 +524,40 @@ export const startFm = async(): Promise<boolean> => {
   try {
     const list = await generate(FM_BATCH)
     if (!list.length) return false
-    fmQueue = list
-    await setTempList(FM_LIST_ID, [...list])
-    playList(LIST_IDS.TEMP, 0)
-    fmState.active = true
+    await playRadio(list, null)
     return true
   } finally {
     // eslint-disable-next-line require-atomic-updates
     fmState.loading = false
   }
+}
+
+/**
+ * Start the radio of an artist (its page), a playlist or an album, from their songs; returns false when nothing was found
+ * @param route the page it is started from (the queue opens it)
+ */
+export const startSeedRadio = async(seed: RadioSeed, route?: PlayingFromRoute): Promise<boolean> => {
+  if (fmState.loading) return true
+  fmState.loading = true
+  try {
+    const list = await generateSeedRadio(seed, [])
+    if (!list.length) return false
+    await playRadio(list, seed, route)
+    return true
+  } finally {
+    // eslint-disable-next-line require-atomic-updates
+    fmState.loading = false
+  }
+}
+
+const playRadio = async(list: Music[], seed: RadioSeed | null, route?: PlayingFromRoute) => {
+  fmQueue = list
+  setFmSeed(seed)
+  // (the queue shows what is playing: the radio, or the radio of an artist / a list with a link to its page)
+  setPlayingFrom(FM_LIST_ID, 'radio', seed?.name ?? '', route)
+  await setTempList(FM_LIST_ID, [...list])
+  playList(LIST_IDS.TEMP, 0)
+  fmState.active = true
 }
 
 const fillFm = async() => {
@@ -378,7 +572,9 @@ const fillFm = async() => {
     }
     // the song playing leads the radio (its similar songs), like the radio of Nuclear
     const playing = (() => { const info = playMusicInfo.musicInfo; return info ? 'progress' in info ? info.metadata.musicInfo : info : null })()
-    const list = await generate({ ...FM_BATCH, exclude: new Set(fmQueue.map(m => m.id)), seedSongs: playing ? [playing] : [] })
+    const list = fmSeed
+      ? await generateSeedRadio(fmSeed, fmQueue, playing ? [playing] : [])
+      : await generate({ ...FM_BATCH, exclude: new Set(fmQueue.map(m => m.id)), seedSongs: playing ? [playing] : [] })
     if (!list.length || !isFmList()) return
     fmQueue = [...fmQueue, ...list]
     await setTempList(FM_LIST_ID, [...fmQueue])

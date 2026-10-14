@@ -3,7 +3,7 @@
     <div
       v-if="isShowPlayerDetail"
       :class="['play-detail', $style.playDetail, { [$style.dybg]: bgSrc }, { fullscreen: isFullscreen }]"
-      role="alert" @contextmenu="handleContextMenu"
+      role="alert" :style="coverStyle" @contextmenu="handleContextMenu"
     >
       <div :class="$style.bg" :style="bgSrc ? { backgroundImage: bgSrc } : null" />
       <DetailHeader />
@@ -25,7 +25,9 @@
 <script>
 import { ref, computed, watch } from '@common/utils/vueTools'
 import { isFullscreen } from '@renderer/store'
-import { isShowPlayerDetail, isShowPlayComment, musicInfo, playMusicInfo } from '@renderer/store/player/state'
+import { isShowPlayerDetail, isShowPlayComment, playMusicInfo } from '@renderer/store/player/state'
+// (the cover shown: the one before stays until the new one is loaded)
+import { displayPic } from '@renderer/core/displayPic'
 import { setShowPlayerDetail, setShowPlayComment, setShowPlayLrcSelectContentLrc } from '@renderer/store/player/action'
 import { appSetting } from '@renderer/store/setting'
 import DetailHeader from './Header.vue'
@@ -34,6 +36,8 @@ import LyricPlayer from './LyricPlayer.vue'
 import DetailFooter from './Footer/index.vue'
 import MusicComment from './components/MusicComment/index.vue'
 import { registerAutoHideMounse, unregisterAutoHideMounse } from './autoHideMounse'
+// (the dynamic background: as much of the color of the theme over the cover as it needs)
+import { coverStyle } from '@renderer/core/coverTone'
 
 // Ported from Any Listen: components/layout/PlayDetail/{index,Main}.svelte
 export default {
@@ -50,8 +54,8 @@ export default {
     let clickTime = 0
 
     const bgSrc = computed(() => {
-      if (!appSetting['playDetail.isDynamicBackground'] || !musicInfo.pic) return null
-      return `url(${JSON.stringify(musicInfo.pic)})`
+      if (!appSetting['playDetail.isDynamicBackground'] || !displayPic.value) return null
+      return `url(${JSON.stringify(displayPic.value)})`
     })
 
     // double right click to hide
@@ -91,6 +95,7 @@ export default {
       isFullscreen,
       visibled,
       bgSrc,
+      coverStyle,
       handleContextMenu,
       hideComment,
       handleAfterEnter,
@@ -141,7 +146,8 @@ export default {
       background-size: 125% 125%;
       &::before {
         background-color: var(--color-content-background);
-        opacity: 0.7;
+        // (core/coverTone.ts: more over a cover far from the theme)
+        opacity: var(--cover-overlay, 0.7);
       }
       &::after {
         background-color: transparent;

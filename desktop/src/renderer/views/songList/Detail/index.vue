@@ -24,6 +24,11 @@
               <svg-icon name="list-random" />
               {{ $t('play_random') }}
             </base-btn>
+            <!-- endless: the songs of the playlist and songs like them (core/recommend.ts) -->
+            <base-btn :disabled="!!listDetailInfo.noItemLabel || fmState.loading" icontext @click="handleRadio">
+              <svg-icon name="radio" />
+              {{ $t('artist__radio') }}
+            </base-btn>
             <base-btn :disabled="!!listDetailInfo.noItemLabel" icontext :outline="collected" @click="addSongListDetail(listDetailInfo.id, listDetailInfo.source, listDetailInfo.info.name, picUrl || listDetailInfo.info.img)">
               <svg-icon :name="collected ? 'check' : 'favorite_folder'" />
               {{ $t(collected ? 'saved_list' : 'save_list') }}
@@ -72,6 +77,8 @@ import { ref, computed, watch, onBeforeUnmount } from '@common/utils/vueTools'
 import { setPageBackHandler } from '@renderer/core/pageBack'
 import { listDetailInfo } from '@renderer/store/songList/state'
 import { setVisibleListDetail, getListDetailAll } from '@renderer/store/songList/action'
+import { fmState, startSeedRadio } from '@renderer/core/recommend'
+import { dialog } from '@renderer/plugins/Dialog'
 import { useRouter } from '@common/utils/vueRouter'
 import { addSongListDetail, playSongListDetail, getCollectedListId } from './action'
 import { userLists } from '@renderer/store/list/state'
@@ -197,6 +204,15 @@ export default {
 
     useKeyBack(handleBack)
 
+    // the radio of the playlist: its songs (all of them) mixed with the songs like them
+    const handleRadio = async() => {
+      const name = String(listDetailInfo.info.name ?? '')
+      let list = await getListDetailAll(id.value, source.value).catch(() => listDetailInfo.list)
+      if (!list.length) list = listDetailInfo.list
+      if (!list.length) return
+      const isStarted = await startSeedRadio({ type: 'list', name, songs: [...list] }, { path: '/songList/detail', query: { source: String(source.value), id: String(id.value) } })
+      if (!isStarted) void dialog({ message: window.i18n.t('artist__radio_failed'), confirmButtonText: window.i18n.t('close') })
+    }
     const handlePlayRandom = () => {
       const list = listDetailInfo.list
       if (!list.length) return
@@ -230,6 +246,8 @@ export default {
       handlePlayList,
       handleBack,
       handlePlayRandom,
+      fmState,
+      handleRadio,
       allSongs,
       handleSearchVisible,
       handleSearchSelect,

@@ -1,6 +1,6 @@
 <template>
-  <div :class="['player', $style.player]">
-    <div :class="$style.bg">
+  <div :class="['player', $style.player]" :style="coverStyle">
+    <div :class="[$style.bg, { [$style.dynamic]: bgSrc }]">
       <!-- the dynamic background of the player (playDetail.isDynamicBackground) -->
       <div v-if="bgSrc" :class="$style.cover" :style="{ backgroundImage: bgSrc }" />
     </div>
@@ -14,7 +14,10 @@
 // Ported from Any Listen: components/layout/PlayBar/components/Container.svelte
 import { computed } from '@common/utils/vueTools'
 import { appSetting } from '@renderer/store/setting'
-import { musicInfo } from '@renderer/store/player/state'
+// (the cover shown: the one before stays until the new one is loaded)
+import { displayPic } from '@renderer/core/displayPic'
+// (the dynamic background: as much of the color of the theme over the cover as it needs)
+import { coverStyle } from '@renderer/core/coverTone'
 
 export default {
   props: {
@@ -25,10 +28,10 @@ export default {
   },
   setup() {
     const bgSrc = computed(() => {
-      if (!appSetting['playDetail.isDynamicBackground'] || !musicInfo.pic) return null
-      return `url(${JSON.stringify(musicInfo.pic)})`
+      if (!appSetting['playDetail.isDynamicBackground'] || !displayPic.value) return null
+      return `url(${JSON.stringify(displayPic.value)})`
     })
-    return { bgSrc }
+    return { bgSrc, coverStyle }
   },
 }
 </script>
@@ -55,6 +58,11 @@ export default {
   transition: @transition-normal;
   transition-property: opacity;
 }
+// the cover over the color of the theme, as see-through as the text needs to keep its contrast (core/coverTone.ts)
+.dynamic {
+  background-color: var(--color-content-background);
+  opacity: 1;
+}
 .cover {
   position: absolute;
   top: -20px;
@@ -64,7 +72,7 @@ export default {
   background-position: center;
   background-size: cover;
   filter: blur(20px);
-  opacity: 0.55;
+  opacity: calc(1 - var(--cover-overlay, 0.55));
 }
 .playerInner {
   position: absolute;

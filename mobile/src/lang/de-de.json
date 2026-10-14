@@ -288,6 +288,8 @@
   "search_type_album": "Album",
   "stats__title": "Statistik",
   "artist__similar": "Ähnliche Künstler",
+  "artist__radio": "Radio",
+  "artist__radio_failed": "Keine Songs für dieses Radio gefunden",
   "home__for_you_artists": "Künstler für dich",
   "home__for_you_because": "Weil du {names} hörst",
   "setting_lastfm": "Last.fm",

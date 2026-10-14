@@ -10,6 +10,7 @@ import { dateFormat } from '@/utils/common'
 import { createMsg2call } from 'message2call'
 import { toast } from '@/utils/tools'
 import { SYNC_CLOSE_CODE, SYNC_CODE } from '../constants'
+import { AppState } from 'react-native'
 
 let status: LX.Sync.Status = {
   status: false,
@@ -27,8 +28,15 @@ export const sendSyncMessage = (message: string) => {
   setSyncStatus(status)
 }
 
+// The server pings every 30 s (desktop: modules/sync/server/server/server.ts). A connection the network dropped while
+// the app was in the background gets no close event: no ping for that long, it is taken as gone and made again
+const PING_TIMEOUT = 30000 + 10000
+
 const heartbeatTools = {
   failedNum: 0,
+  lastMessageAt: 0,
+  // (reconnected by itself: no "Sync connected" message)
+  isAutoReconnect: false,
   maxTryNum: 100000,
   stepMs: 3000,
   connectTimeout: null as NodeJS.Timeout | null,
@@ -40,15 +48,33 @@ const heartbeatTools = {
     this.heartbeat()
   },
   heartbeat() {
+    this.lastMessageAt = Date.now()
     if (this.pingTimeout) clearTimeout(this.pingTimeout)
-
-    // Use `WebSocket#terminate()`, which immediately destroys the connection,
-    // instead of `WebSocket#close()`, which waits for the close timer.
-    // Delay should be equal to the interval at which your server
-    // sends out pings plus a conservative assumption of the latency.
+    // (a close of a dead connection waits for the network: the connection is made again at once)
     this.pingTimeout = setTimeout(() => {
-      client?.close()
-    }, 30000 + 1000)
+      this.pingTimeout = null
+      this.forceReconnect('Connection lost, reconnecting...')
+    }, PING_TIMEOUT)
+  },
+  /**
+   * The connection is left as it is (it may never close by itself) and made again
+   */
+  forceReconnect(message: string) {
+    if (!client) return
+    log.info('force reconnect:', message)
+    const socket = client
+    socket.data.isStale = true
+    socket.data.handleClosed?.()
+    try {
+      socket.close(SYNC_CLOSE_CODE.failed)
+    } catch {}
+    sendSyncStatus({
+      status: false,
+      message,
+    })
+    this.isAutoReconnect = true
+    this.clearTimeout()
+    connect(socket.data.urlInfo, socket.data.keyInfo)
   },
   reConnnect() {
     this.clearTimeout()
@@ -100,6 +126,7 @@ const heartbeatTools = {
     console.log('heartbeatTools connect')
     this.connectTimeout = setTimeout(() => {
       this.connectTimeout = null
+      if (socket.data.isStale) return
       if (client) {
         try {
           client.close(SYNC_CLOSE_CODE.failed)
@@ -120,17 +147,20 @@ const heartbeatTools = {
       this.reConnnect()
     }, 2 * 60 * 1000)
     socket.addEventListener('open', () => {
+      if (socket.data.isStale) return
       if (this.connectTimeout) {
         clearTimeout(this.connectTimeout)
         this.connectTimeout = null
       }
       this.handleOpen()
     })
-    socket.addEventListener('message', ({ data }) => {
-      if (data == 'ping') this.heartbeat()
+    socket.addEventListener('message', () => {
+      // (any message shows the connection is alive)
+      if (!socket.data.isStale) this.heartbeat()
     })
     socket.addEventListener('close', (event) => {
-      // console.log(event.code)
+      // (a connection replaced already)
+      if (socket.data.isStale) return
       switch (event.code) {
         case SYNC_CLOSE_CODE.normal:
         case SYNC_CLOSE_CODE.failed:
@@ -159,7 +189,8 @@ export const connect = (urlInfo: LX.Sync.UrlInfo, keyInfo: LX.Sync.KeyInfo) => {
     funcsObj: {
       ...callObj,
       finished() {
-        toast('Sync connected')
+        if (!heartbeatTools.isAutoReconnect) toast('Sync connected')
+        heartbeatTools.isAutoReconnect = false
         client!.isReady = true
         sendSyncStatus({
           status: true,
@@ -198,8 +229,9 @@ export const connect = (urlInfo: LX.Sync.UrlInfo, keyInfo: LX.Sync.KeyInfo) => {
   client.remoteQueueDislike = message2read.createQueueRemote('dislike')
   client.remoteQueueStats = message2read.createQueueRemote('stats')
 
+  const socket = client
   client.addEventListener('message', ({ data }) => {
-    if (data == 'ping') return
+    if (data == 'ping' || socket.data.isStale) return
     if (typeof data === 'string') {
       void decryptMsg(keyInfo, data).then((data) => {
         let syncData: LX.Sync.ServerSyncActions
@@ -226,6 +258,7 @@ export const connect = (urlInfo: LX.Sync.UrlInfo, keyInfo: LX.Sync.KeyInfo) => {
 
   const initMessage = 'Wait syncing...'
   client.addEventListener('open', () => {
+    if (socket.data.isStale) return
     log.info('connect')
     // const store = getStore()
     // global.lx.syncKeyInfo = keyInfo
@@ -241,7 +274,11 @@ export const connect = (urlInfo: LX.Sync.UrlInfo, keyInfo: LX.Sync.KeyInfo) => {
       message: initMessage,
     })
   })
-  client.addEventListener('close', ({ code }) => {
+  // the end of the connection: on its close event, or at once when it is replaced (forceReconnect)
+  let isClosed = false
+  const handleClosed = () => {
+    if (isClosed) return false
+    isClosed = true
     const err = new Error('closed')
     try {
       for (const handler of closeEvents) void handler(err)
@@ -251,6 +288,11 @@ export const connect = (urlInfo: LX.Sync.UrlInfo, keyInfo: LX.Sync.KeyInfo) => {
     closeEvents = []
     disconnected = true
     message2read.destroy()
+    return true
+  }
+  client.data.handleClosed = handleClosed
+  client.addEventListener('close', ({ code }) => {
+    if (!handleClosed() || socket.data.isStale) return
     switch (code) {
       case SYNC_CLOSE_CODE.normal:
       // case SYNC_CLOSE_CODE.failed:
@@ -270,6 +312,7 @@ export const connect = (urlInfo: LX.Sync.UrlInfo, keyInfo: LX.Sync.KeyInfo) => {
     }
   })
   client.addEventListener('error', ({ message }) => {
+    if (socket.data.isStale) return
     sendSyncStatus({
       status: false,
       message,
@@ -287,3 +330,10 @@ export const disconnect = async() => {
 }
 
 export const getStatus = (): LX.Sync.Status => status
+
+// back in the app after a while: a connection that got no ping meanwhile is made again at once (the timers of the
+// app may not have run in the background)
+AppState.addEventListener('change', state => {
+  if (state != 'active' || !client || client.data.isStale === true || !heartbeatTools.lastMessageAt) return
+  if (Date.now() - heartbeatTools.lastMessageAt > PING_TIMEOUT) heartbeatTools.forceReconnect('Connection lost, reconnecting...')
+})

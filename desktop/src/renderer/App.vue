@@ -23,7 +23,8 @@
 <script setup>
 import { computed, onMounted } from '@common/utils/vueTools'
 import { appSetting } from '@renderer/store/setting'
-import { musicInfo } from '@renderer/store/player/state'
+// (the cover shown: the one before stays until the new one is loaded)
+import { displayPic } from '@renderer/core/displayPic'
 // import BubbleCursor from '@common/utils/effects/cursor-effects/bubbleCursor'
 // import '@common/utils/effects/snow.min'
 import useApp from '@renderer/core/useApp'
@@ -31,8 +32,8 @@ import useApp from '@renderer/core/useApp'
 useApp()
 
 const appBgSrc = computed(() => {
-  if (!appSetting['theme.isDynamicBackground'] || !musicInfo.pic) return null
-  return `url(${JSON.stringify(musicInfo.pic)})`
+  if (!appSetting['theme.isDynamicBackground'] || !displayPic.value) return null
+  return `url(${JSON.stringify(displayPic.value)})`
 })
 
 onMounted(() => {

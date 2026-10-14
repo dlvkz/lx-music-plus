@@ -23,6 +23,11 @@
             <svg-icon name="list-random" />
             {{ $t('play_random') }}
           </base-btn>
+          <!-- endless: the songs of the list and songs like them (core/recommend.ts) -->
+          <base-btn :disabled="!musicCount || fmState.loading" icontext @click="handleRadio">
+            <svg-icon name="radio" />
+            {{ $t('artist__radio') }}
+          </base-btn>
         </div>
         <div :class="$style.btns">
           <base-btn :outline="!downloadState.done" icon :aria-label="synced ? $t('download__sync_off') : $t('download__sync_on')" @click="toggleSync">
@@ -54,6 +59,8 @@ import useListMeta from '@renderer/utils/compositions/useListMeta'
 import { isSyncList, setListSync, downloadRest, useListDownloadState } from '@renderer/store/download/sync'
 import { confirmRemoveDownloads } from '@renderer/store/download/prompt'
 import { getListMusics } from '@renderer/store/list/action'
+import { fmState, startSeedRadio } from '@renderer/core/recommend'
+import { dialog } from '@renderer/plugins/Dialog'
 
 // Ported from Any Listen: components/common/MusicList/Header.svelte
 const LIST_PIC_ICON = {
@@ -110,7 +117,17 @@ export default {
       })
       if (removed) await setListSync(id, false)
     }
+    // the radio of the list: its songs mixed with the songs like them
+    const handleRadio = async() => {
+      const list = [...await getListMusics(props.listId)]
+      if (!list.length) return
+      const isStarted = await startSeedRadio({ type: 'list', name: props.name, songs: list }, { path: '/list', query: { id: props.listId } })
+      if (!isStarted) void dialog({ message: window.i18n.t('artist__radio_failed'), confirmButtonText: window.i18n.t('close') })
+    }
+
     return {
+      fmState,
+      handleRadio,
       synced,
       downloadState,
       toggleSync,

@@ -72,7 +72,8 @@ watch(visible, (visible) => {
 
   svg {
     transition: opacity @transition-fast;
-    opacity: .5;
+    // (raised over a dynamic background that needs it: core/coverTone.ts)
+    opacity: var(--secondary-icon-opacity, 0.5);
     filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.2));
   }
   &:hover {

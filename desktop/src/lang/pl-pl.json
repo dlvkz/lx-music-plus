@@ -374,6 +374,8 @@
   "search__type_album": "Album",
   "stats__title": "Statystyki",
   "artist__similar": "Podobni wykonawcy",
+  "artist__radio": "Radio",
+  "artist__radio_failed": "Nie znaleziono utworów dla tego radia",
   "home__for_you_artists": "Wykonawcy dla Ciebie",
   "home__for_you_because": "Bo słuchasz: {names}",
   "setting__lastfm": "Last.fm",

@@ -123,7 +123,8 @@ const toggleMode = (mode) => {
 
   svg {
     transition: opacity @transition-fast;
-    opacity: .5;
+    // (raised over a dynamic background that needs it: core/coverTone.ts)
+    opacity: var(--secondary-icon-opacity, 0.5);
   }
   &:hover {
     svg {

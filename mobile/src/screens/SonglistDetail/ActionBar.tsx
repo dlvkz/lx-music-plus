@@ -1,5 +1,6 @@
-import { memo } from 'react'
-import { ActionRow, CollectButton, DownloadButton, PlayButton } from '@/components/common/ActionIcons'
+import { memo, useEffect, useState } from 'react'
+import { ActionRow, CollectButton, DownloadButton, PlayButton, RadioButton } from '@/components/common/ActionIcons'
+import { fmState, onFmStateChanged, startSeedRadio } from '@/core/recommend'
 import { downloadMusics, downloadRest, isSyncList, setListSync, useListDownloadState, useDownloadState } from '@/core/download'
 import { confirmRemoveDownloads } from '@/core/downloadPrompt'
 import { getListDetailAll } from '@/core/songlist'
@@ -57,6 +58,20 @@ export default memo(() => {
     })
   }
 
+  // the radio of the playlist: its songs mixed with the songs like them (core/recommend.ts)
+  const [isRadioLoading, setRadioLoading] = useState(fmState.loading)
+  useEffect(() => onFmStateChanged(state => { setRadioLoading(state.loading) }), [])
+  const handleRadio = () => {
+    const name = songlistState.listDetailInfo.info.name ? String(songlistState.listDetailInfo.info.name) : info.name
+    if (!name) return
+    void getListDetailAll(info.source, info.id).catch(() => songlistState.listDetailInfo.list).then(async list => {
+      if (!list.length) list = songlistState.listDetailInfo.list
+      return startSeedRadio({ type: 'list', name, songs: list }, { kind: 'songlist', source: info.source, id: info.id, name })
+    }).then(isStarted => {
+      if (!isStarted) toast(t('artist__radio_failed'))
+    })
+  }
+
   const handleCollection = () => {
     if (!songlistState.listDetailInfo.info.name) return
     void handleCollect(info.id, info.source, songlistState.listDetailInfo.info.name || info.name, songlistState.listDetailInfo.info.img ?? info.img)
@@ -66,6 +81,7 @@ export default memo(() => {
     <ActionRow
       left={<DownloadButton active={isSync} done={downloadState.done} downloading={downloadState.downloading} progress={downloadState.progress} partial={downloadState.partial} onPress={handleDownload} />}
       right={<>
+        <RadioButton disabled={isRadioLoading} onPress={handleRadio} />
         <CollectButton collected={isCollected} onPress={handleCollection} />
         <PlayButton onPress={handlePlayAll} />
       </>}

@@ -4,6 +4,7 @@ import { Animated, Easing, TouchableOpacity, View } from 'react-native'
 // import { useLayout } from '@/utils/hooks'
 import { createStyle } from '@/utils/tools'
 import { useIsPlay, usePlayerMusicInfo } from '@/store/player/hook'
+import { useDisplayPic } from '@/core/displayPic'
 import { useWindowSize } from '@/utils/hooks'
 import { NAV_SHEAR_NATIVE_IDS } from '@/config/constant'
 import { useNavigationComponentDidAppear } from '@/navigation'
@@ -28,18 +29,19 @@ const CD_DOTS = [['top', 'left'], ['top', 'right'], ['bottom', 'left'], ['bottom
 
 // Cover: a square, or a turning disc, a tap switches between them
 const Cover = memo(({ componentId, size }: { componentId: string, size: number }) => {
-  const musicInfo = usePlayerMusicInfo()
   const isPlay = useIsPlay()
   const isDisc = useSettingValue('playDetail.isDiscCover')
   const [animated, setAnimated] = useState(!!commonState.componentIds.playDetail)
-  const [pic, setPic] = useState(musicInfo.pic)
+  // (the cover before stays until the new one is loaded)
+  const displayPic = useDisplayPic()
+  const [pic, setPic] = useState(displayPic)
   const theme = useTheme()
   const rotate = useRef(new Animated.Value(0)).current
   const rotateValue = useRef(0)
 
   useEffect(() => {
-    if (animated) setPic(musicInfo.pic)
-  }, [musicInfo.pic, animated])
+    if (animated) setPic(displayPic)
+  }, [displayPic, animated])
 
   useNavigationComponentDidAppear(componentId, () => {
     setAnimated(true)

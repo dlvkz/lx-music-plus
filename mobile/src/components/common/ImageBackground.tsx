@@ -9,8 +9,9 @@
  * @format
  */
 
-import { forwardRef } from 'react'
+import { forwardRef, useCallback, useEffect, useRef, useState } from 'react'
 import {
+  AppState,
   View,
   StyleSheet,
   Image,
@@ -97,4 +98,40 @@ export default forwardRef<View, ImageBackgroundProps>(({
 
 export const prefetch = async(url: string) => {
   return Image.prefetch(url)
+}
+
+const MAX_RETRY = 3
+/**
+ * The dynamic background: a cover that failed to show (after the app was in the background, its image gone from
+ * the cache...) is downloaded again and shown again, instead of leaving only the color over it
+ */
+export const useImageRetry = (url: string | null) => {
+  const [key, setKey] = useState(0)
+  const retryRef = useRef(0)
+  useEffect(() => {
+    retryRef.current = 0
+  }, [url])
+  // back from a while in the background: shown again (the image can be dropped without an error)
+  useEffect(() => {
+    if (!url) return
+    let hiddenAt = 0
+    const subscription = AppState.addEventListener('change', state => {
+      if (state == 'background') hiddenAt = Date.now()
+      else if (state == 'active' && hiddenAt && Date.now() - hiddenAt > 60_000) setKey(key => key + 1)
+    })
+    return () => {
+      subscription.remove()
+    }
+  }, [url])
+  const onError = useCallback(() => {
+    if (!url || retryRef.current >= MAX_RETRY) return
+    const retry = ++retryRef.current
+    console.log('dynamic background failed to show, retry', retry, url)
+    setTimeout(() => {
+      void prefetch(url).catch(() => false).finally(() => {
+        setKey(key => key + 1)
+      })
+    }, 500 * retry)
+  }, [url])
+  return { key, onError }
 }

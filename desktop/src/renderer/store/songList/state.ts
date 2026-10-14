@@ -8,12 +8,15 @@ export interface SortInfo {
 
 export const sources: LX.OnlineSource[] = markRaw([])
 export const sortList = markRaw<Partial<Record<LX.OnlineSource, SortInfo[]>>>({})
+/** false: the sorts don't apply to the playlists of a category (kw, tx) */
+export const sortWithTag = markRaw<Partial<Record<LX.OnlineSource, boolean>>>({})
 
 for (const source of music.sources) {
   const songList = music[source.id as LX.OnlineSource]?.songList
   if (!songList) continue
   sources.push(source.id as LX.OnlineSource)
   sortList[source.id as LX.OnlineSource] = songList.sortList as SortInfo[]
+  sortWithTag[source.id as LX.OnlineSource] = (songList as { isSortWithTag?: boolean }).isSortWithTag !== false
 }
 
 export interface TagInfoItem<T extends LX.OnlineSource = LX.OnlineSource> {

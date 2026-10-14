@@ -9,13 +9,14 @@ import ControlBtn from './components/ControlBtn'
 import { createStyle } from '@/utils/tools'
 // import { useSettingValue } from '@/store/setting/hook'
 import { useBgPic } from '@/store/common/hook'
-import ImageBackground from '@/components/common/ImageBackground'
-import { defaultHeaders } from '@/components/common/Image'
+import CoverBackground from '@/components/common/CoverBackground'
 import { useTheme } from '@/store/theme/hook'
 import { useSettingValue } from '@/store/setting/hook'
+import { useCoverOverlay, useCoverTheme } from '@/core/coverTone'
+import { ThemeContext } from '@/store/theme/state'
 
 
-export default memo(({ isHome = false }: { isHome?: boolean }) => {
+const PlayerBar = memo(({ isHome = false }: { isHome?: boolean }) => {
   // const { onLayout, ...layout } = useLayout()
   const { keyboardShown } = useKeyboard()
   const theme = useTheme()
@@ -24,6 +25,8 @@ export default memo(({ isHome = false }: { isHome?: boolean }) => {
   const isDynamicBg = useSettingValue('playDetail.isDynamicBg')
   const bgPic = useBgPic()
   const pic = isDynamicBg ? bgPic : null
+  // (core/coverTone.ts: more of the color of the theme over a cover far from it)
+  const overlay = useCoverOverlay(pic, 0.72)
 
   const playerComponent = useMemo(() => (
     <View style={{ ...styles.container, backgroundColor: theme['c-content-background'] }}>
@@ -31,9 +34,10 @@ export default memo(({ isHome = false }: { isHome?: boolean }) => {
         pic
           ? (
               <View style={styles.bg}>
-                <ImageBackground style={styles.bgImage} source={{ uri: pic, headers: defaultHeaders }} resizeMode="cover" blurRadius={20}>
-                  <View style={{ flex: 1, backgroundColor: theme['c-content-background'], opacity: 0.72 }} />
-                </ImageBackground>
+                {/* (the cover before stays until the new one is drawn) */}
+                <CoverBackground style={styles.bgImage} uri={pic} blurRadius={20}>
+                  <View style={{ flex: 1, backgroundColor: theme['c-content-background'], opacity: overlay }} />
+                </CoverBackground>
               </View>
             )
           : null
@@ -50,11 +54,23 @@ export default memo(({ isHome = false }: { isHome?: boolean }) => {
         <ControlBtn />
       </View>
     </View>
-  ), [theme, isHome, pic])
+  ), [theme, isHome, pic, overlay])
 
   // console.log('render pb')
 
   return autoHidePlayBar && keyboardShown ? null : playerComponent
+})
+
+// the dynamic background: the text and the buttons keep their contrast over the cover (core/coverTone.ts)
+export default memo(({ isHome = false }: { isHome?: boolean }) => {
+  const isDynamicBg = useSettingValue('playDetail.isDynamicBg')
+  const bgPic = useBgPic()
+  const coverTheme = useCoverTheme(isDynamicBg ? bgPic : null)
+  return (
+    <ThemeContext.Provider value={coverTheme}>
+      <PlayerBar isHome={isHome} />
+    </ThemeContext.Provider>
+  )
 })
 
 

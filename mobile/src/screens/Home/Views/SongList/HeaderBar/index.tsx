@@ -37,7 +37,7 @@ export default forwardRef<HeaderBarType, HeaderBarProps>(({ onSortChange, onTagC
 
   useImperativeHandle(ref, () => ({
     setSource(source, sortId, tagName, tagId) {
-      sortTabRef.current?.setSource(source, sortId)
+      sortTabRef.current?.setSource(source, sortId, tagId)
       tagRef.current?.setSelectedTagInfo(source, tagName, tagId)
       sourceSelectorRef.current?.setSource(source)
       openListRef.current?.setInfo(source)

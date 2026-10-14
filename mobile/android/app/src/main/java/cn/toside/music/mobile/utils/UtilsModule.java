@@ -6,6 +6,9 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.graphics.Rect;
 import android.net.Uri;
 import android.net.wifi.WifiInfo;
@@ -29,6 +32,10 @@ import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.WritableNativeArray;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.Locale;
 import java.util.Objects;
 
@@ -381,5 +388,69 @@ public class UtilsModule extends ReactContextBaseJavaModule {
       }
     }).start();
   }
-}
 
+  private static double toLinear(int channel) {
+    double c = channel / 255.0;
+    return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  }
+
+  private static double toLightness(double luminance) {
+    return (116 * Math.cbrt(luminance) - 16) / 100;
+  }
+
+  // The lightness (L*, 0 - 1) of an image, a file or an url: its average, its light parts (90th percentile), its dark
+  // parts (10th percentile). The dynamic background of the player keeps its text readable over the cover with it
+  @ReactMethod
+  public void getImageLightness(String url, Promise promise) {
+    new Thread(() -> {
+      InputStream stream = null;
+      HttpURLConnection connection = null;
+      try {
+        if (url.startsWith("file://")) stream = new FileInputStream(Uri.parse(url).getPath());
+        else if (url.startsWith("/")) stream = new FileInputStream(url);
+        else {
+          connection = (HttpURLConnection) new URL(url).openConnection();
+          connection.setConnectTimeout(10000);
+          connection.setReadTimeout(15000);
+          connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36");
+          stream = connection.getInputStream();
+        }
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        // (a cover is small enough at an eighth of its size)
+        options.inSampleSize = 8;
+        Bitmap bitmap = BitmapFactory.decodeStream(stream, null, options);
+        if (bitmap == null) {
+          promise.reject("-1", "the image can't be decoded");
+          return;
+        }
+        int size = 24;
+        Bitmap small = Bitmap.createScaledBitmap(bitmap, size, size, true);
+        int[] pixels = new int[size * size];
+        small.getPixels(pixels, 0, size, 0, 0, size, size);
+        if (small != bitmap) small.recycle();
+        bitmap.recycle();
+        double sum = 0;
+        double[] values = new double[pixels.length];
+        for (int i = 0; i < pixels.length; i++) {
+          int pixel = pixels[i];
+          double luminance = 0.2126 * toLinear(Color.red(pixel)) + 0.7152 * toLinear(Color.green(pixel)) + 0.0722 * toLinear(Color.blue(pixel));
+          sum += luminance;
+          values[i] = toLightness(luminance);
+        }
+        java.util.Arrays.sort(values);
+        WritableMap result = Arguments.createMap();
+        result.putDouble("mean", toLightness(sum / pixels.length));
+        result.putDouble("light", values[(int) Math.floor(values.length * 0.9)]);
+        result.putDouble("dark", values[(int) Math.floor(values.length * 0.1)]);
+        promise.resolve(result);
+      } catch (Exception e) {
+        promise.reject("-1", e.getMessage());
+      } finally {
+        try {
+          if (stream != null) stream.close();
+        } catch (Exception ignored) {}
+        if (connection != null) connection.disconnect();
+      }
+    }).start();
+  }
+}

@@ -63,7 +63,7 @@
               </div>
               <div :class="$style.heroFooter">
                 <ol :class="$style.heroSongs">
-                  <li v-if="fmState.active && fmSong">
+                  <li v-if="isUserFm && fmSong">
                     <span><svg-icon name="music" /></span>
                     <span>{{ fmSong.name }} - {{ fmSong.singer }}</span>
                   </li>
@@ -350,9 +350,11 @@ const fmSong = computed(() => {
   const info = playMusicInfo.musicInfo
   return info ? 'progress' in info ? info.metadata.musicInfo : info : null
 })
-const fmCover = computed(() => fmState.active ? getSongCover(fmSong.value) : mixCovers.value[1] ?? null)
+// (the radio of an artist, started from its page, is not this one)
+const isUserFm = computed(() => fmState.active && !fmState.seed)
+const fmCover = computed(() => isUserFm.value ? getSongCover(fmSong.value) : mixCovers.value[1] ?? null)
 const handleFm = () => {
-  if (fmState.active || fmState.loading) return
+  if (isUserFm.value || fmState.loading) return
   void startFm()
 }
 

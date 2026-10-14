@@ -161,6 +161,21 @@ export const initHotKey = async() => {
   let localConfig = electronStore_hotKey.get('local') as LX.HotKeyConfig | null
   let globalConfig = electronStore_hotKey.get('global') as LX.HotKeyConfig | null
 
+  // the keys of a web player (space, arrows: common/defaultHotKey.ts) added once to a config made before them: an
+  // action still on its old default key (or on none) takes its new key when that key is free
+  if (localConfig && !electronStore_hotKey.get('webPlayerKeys')) {
+    const oldKeys: Record<string, string | undefined> = { [defaultHotKey.local.keys.space.action]: 'mod+f5' }
+    for (const [key, info] of Object.entries(defaultHotKey.local.keys)) {
+      if (localConfig.keys[key]) continue
+      const current = Object.entries(localConfig.keys).find(([, item]) => item.action == info.action)?.[0]
+      if (current && current != oldKeys[info.action]) continue
+      if (current) localConfig.keys = Object.fromEntries(Object.entries(localConfig.keys).filter(([name]) => name != current))
+      localConfig.keys[key] = { ...info }
+    }
+    electronStore_hotKey.set('local', localConfig)
+    electronStore_hotKey.set('webPlayerKeys', true)
+  }
+
   if (globalConfig) {
     // 移除v2.2.0及之前设置的全局媒体快捷键注册
     if (globalConfig.keys.MediaPlayPause) {

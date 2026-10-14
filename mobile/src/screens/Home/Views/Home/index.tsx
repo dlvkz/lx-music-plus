@@ -273,7 +273,8 @@ export default () => {
     void playDailyMix(dailyMix, 0)
   }, [dailyMix])
   const playRadio = useCallback(() => {
-    if (fmState.active || fmState.loading) return
+    // (the radio of an artist, started from its page, is not this one)
+    if ((fmState.active && !fmState.seed) || fmState.loading) return
     void startFm()
   }, [])
   const openSetting = useCallback(() => {
@@ -368,7 +369,7 @@ export default () => {
                   cover={getPic(mixCover, 300)} onPress={openMix} onPlay={playMix}
                 />
                 <HeroCard
-                  title={t('home__fm')} count={0} songs={[{ id: 'fm', name: t(fm.loading ? 'list_loading' : fm.active ? 'home__fm_playing' : 'home__fm_desc') }]} width={heroWidth}
+                  title={t('home__fm')} count={0} songs={[{ id: 'fm', name: t(fm.loading ? 'list_loading' : fm.active && !fm.seed ? 'home__fm_playing' : 'home__fm_desc') }]} width={heroWidth}
                   cover={getPic(radioCover, 300)} onPress={playRadio} onPlay={playRadio}
                 />
               </>

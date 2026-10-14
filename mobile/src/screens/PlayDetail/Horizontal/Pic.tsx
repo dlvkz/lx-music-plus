@@ -1,7 +1,7 @@
 import { memo, useEffect, useState } from 'react'
 import { View } from 'react-native'
 // import { useLayout } from '@/utils/hooks'
-import { usePlayerMusicInfo } from '@/store/player/hook'
+import { useDisplayPic } from '@/core/displayPic'
 import { useWindowSize } from '@/utils/hooks'
 import { useNavigationComponentDidAppear } from '@/navigation'
 import { NAV_SHEAR_NATIVE_IDS } from '@/config/constant'
@@ -15,15 +15,16 @@ import commonState from '@/store/common/state'
 
 
 export default memo(({ componentId }: { componentId: string }) => {
-  const musicInfo = usePlayerMusicInfo()
   const { width: winWidth, height: winHeight } = useWindowSize()
   const statusBarHeight = useStatusbarHeight()
 
   const [animated, setAnimated] = useState(!!commonState.componentIds.playDetail)
-  const [pic, setPic] = useState(musicInfo.pic)
+  // (the cover before stays until the new one is loaded)
+  const displayPic = useDisplayPic()
+  const [pic, setPic] = useState(displayPic)
   useEffect(() => {
-    if (animated) setPic(musicInfo.pic)
-  }, [musicInfo.pic, animated])
+    if (animated) setPic(displayPic)
+  }, [displayPic, animated])
 
   useNavigationComponentDidAppear(componentId, () => {
     setAnimated(true)

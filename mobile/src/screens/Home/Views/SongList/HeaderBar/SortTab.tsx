@@ -11,7 +11,7 @@ export interface SortTabProps {
 }
 
 export interface SortTabType {
-  setSource: (source: Source, activeTab: SortInfo['id']) => void
+  setSource: (source: Source, activeTab: SortInfo['id'], tagId: string) => void
 }
 
 
@@ -23,9 +23,10 @@ export default forwardRef<SortTabType, SortTabProps>(({ onSortChange }, ref) => 
   const scrollViewRef = useRef<ScrollView>(null)
 
   useImperativeHandle(ref, () => ({
-    setSource(source, activeTab) {
+    setSource(source, activeTab, tagId) {
       scrollViewRef.current?.scrollTo({ x: 0 })
-      setSortList(songlistState.sortList[source]!)
+      // a category of a source that can't sort it: no sort shown
+      setSortList(tagId && !songlistState.sortWithTag[source] ? [] : songlistState.sortList[source]!)
       setActiveId(activeTab)
     },
   }))

@@ -1,7 +1,7 @@
 <template>
   <div :class="$style.container">
     <button type="button" :class="$style.btn" :aria-label="$t('player__pic_tip')" @click="showPlayerDetail" @contextmenu="handleToMusicLocation">
-      <base-image decoding="auto" loading="eager" :src="musicInfo.pic" @error="handleError" />
+      <base-image decoding="auto" loading="eager" :src="displayPic" @error="handleError" />
     </button>
   </div>
 </template>
@@ -9,7 +9,9 @@
 <script setup>
 import { useRouter } from '@common/utils/vueRouter'
 import { LIST_IDS } from '@common/constants'
-import { musicInfo, playInfo, playMusicInfo } from '@renderer/store/player/state'
+import { playInfo, playMusicInfo } from '@renderer/store/player/state'
+// (the cover shown: the one before stays until the new one is loaded)
+import { displayPic } from '@renderer/core/displayPic'
 import { setMusicInfo, setShowPlayerDetail } from '@renderer/store/player/action'
 
 // Ported from Any Listen: components/layout/PlayBar/components/Pic.svelte

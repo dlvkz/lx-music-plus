@@ -1,5 +1,6 @@
 import { memo } from 'react'
 import { TouchableOpacity, View } from 'react-native'
+import Svg, { Path } from 'react-native-svg'
 import { Icon } from './Icon'
 import { useTheme } from '@/store/theme/hook'
 import { createStyle } from '@/utils/tools'
@@ -152,6 +153,25 @@ export const IconButton = memo(({ icon, onPress, disabled = false, size = 30 }: 
     <TouchableOpacity activeOpacity={0.7} disabled={disabled} onPress={onPress} hitSlop={HIT_SLOP}
       style={{ ...styles.center, width: btnSize, height: btnSize, opacity: disabled ? 0.5 : 1 }}>
       <Icon name={icon} rawSize={btnSize * 0.76} />
+    </TouchableOpacity>
+  )
+})
+
+// (Material Design Icons: access-point)
+const RADIO_ICON = 'M4.93,4.93C3.12,6.74 2,9.24 2,12C2,14.76 3.12,17.26 4.93,19.07L6.34,17.66C4.89,16.22 4,14.22 4,12C4,9.79 4.89,7.78 6.34,6.34L4.93,4.93M19.07,4.93L17.66,6.34C19.11,7.78 20,9.79 20,12C20,14.22 19.11,16.22 17.66,17.66L19.07,19.07C20.88,17.26 22,14.76 22,12C22,9.24 20.88,6.74 19.07,4.93M7.76,7.76C6.67,8.85 6,10.35 6,12C6,13.65 6.67,15.15 7.76,16.24L9.17,14.83C8.45,14.11 8,13.11 8,12C8,10.89 8.45,9.89 9.17,9.17L7.76,7.76M16.24,7.76L14.83,9.17C15.55,9.89 16,10.89 16,12C16,13.11 15.55,14.11 14.83,14.83L16.24,16.24C17.33,15.15 18,13.65 18,12C18,10.35 17.33,8.85 16.24,7.76M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10Z'
+
+/**
+ * Radio (an artist: its songs and songs like them), of the same size as the collect button
+ */
+export const RadioButton = memo(({ onPress, disabled = false, size = 30 }: { onPress: () => void, disabled?: boolean, size?: number }) => {
+  const theme = useTheme()
+  const btnSize = scaleSizeW(size)
+  return (
+    <TouchableOpacity activeOpacity={0.7} disabled={disabled} onPress={onPress} hitSlop={HIT_SLOP}
+      style={{ ...styles.center, width: btnSize, height: btnSize, opacity: disabled ? 0.5 : 1 }}>
+      <Svg width={btnSize * 0.8} height={btnSize * 0.8} viewBox="0 0 24 24">
+        <Path d={RADIO_ICON} fill={theme['c-font']} />
+      </Svg>
     </TouchableOpacity>
   )
 })

@@ -23,6 +23,11 @@
               <svg-icon name="list-random" />
               {{ $t('play_random') }}
             </base-btn>
+            <!-- endless: songs of the artist and songs like them (core/recommend.ts) -->
+            <base-btn :disabled="!(info || songs.list.length) || fmState.loading" icontext @click="handleRadio">
+              <svg-icon name="radio" />
+              {{ $t('artist__radio') }}
+            </base-btn>
             <base-btn :disabled="!info" icontext :outline="collected" @click="handleCollect">
               <svg-icon :name="collected ? 'check' : 'favorite_folder'" />
               {{ $t(collected ? 'saved_list' : 'save_list') }}
@@ -112,6 +117,7 @@ import { getRandom } from '@common/utils/common'
 import { dialog } from '@renderer/plugins/Dialog'
 import { getCachedTranslation } from '@renderer/utils/translate'
 import { isCollected, toggleCollection, updateCollectionImg } from '@renderer/store/list/collections'
+import { fmState, startSeedRadio } from '@renderer/core/recommend'
 
 const ONLINE_SOURCES = ['kw', 'wy', 'tx', 'kg', 'mg', 'sc', 'bc', 'kh']
 // the sources the artist page is made of, their picture and bio first
@@ -316,6 +322,13 @@ export default {
       if (appSetting['player.togglePlayMethod'] != 'random') updateSetting({ 'player.togglePlayMethod': 'random' })
       handlePlayList(getRandom(0, songs.list.length))
     }
+    // the radio of the artist: its songs (every source of the page) mixed with the songs like them
+    const handleRadio = async() => {
+      const artistName = info.value?.name || String(name.value)
+      const artist = normalizeArtistName(artistName)
+      const isStarted = await startSeedRadio({ type: 'artist', name: artist, songs: fullSongs ?? songs.list }, { path: '/artist', query: { name: String(name.value) } })
+      if (!isStarted) void dialog({ message: t('artist__radio_failed'), confirmButtonText: t('close') })
+    }
     const toggleMulti = () => {
       if (listRef.value) listRef.value.multimode = !listRef.value.multimode
     }
@@ -366,6 +379,8 @@ export default {
       handlePlayList,
       handlePlayAll,
       handlePlayRandom,
+      fmState,
+      handleRadio,
       toggleMulti,
       toggleFind,
       openAlbumPage,

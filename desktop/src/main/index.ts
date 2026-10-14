@@ -24,9 +24,10 @@ const init = () => {
 }
 
 initGlobalData()
+// (the data folder first: a portable copy has its own, it runs next to the installed app)
+setUserDataPath()
 initSingleInstanceHandle()
 applyElectronEnvParams()
-setUserDataPath()
 registerDeeplink(init)
 listenerAppEvent(init)
 

@@ -17,6 +17,10 @@ declare global {
         data: {
           keyInfo: KeyInfo
           urlInfo: UrlInfo
+          /** replaced by a new connection (plugins/sync/client/client.ts): its events are left out */
+          isStale?: boolean
+          /** ends it (once) without waiting for its close event */
+          handleClosed?: () => boolean
         }
         moduleReadys: {
           list: boolean

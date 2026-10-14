@@ -120,27 +120,28 @@ const getTopArtists = async() => {
   const add = (name: string) => {
     if (name && !names.some(n => n.toLowerCase() == name.toLowerCase())) names.push(name)
   }
-  const stats = await getListenStats(getRangeFrom('last90Days'), 6).catch(() => null)
+  const stats = await getListenStats(getRangeFrom('last90Days'), 12).catch(() => null)
   for (const artist of stats?.topArtists ?? []) add(artist.name)
-  if (names.length < 4) {
+  if (names.length < 8) {
     const counts = new Map<string, number>()
     for (const music of await getListMusics(LIST_IDS.LOVE)) {
       const name = music.singer.split(/\s*(?:、|&|;|；|\/|,|，|\|)\s*/)[0]?.trim()
       if (name) counts.set(name, (counts.get(name) ?? 0) + 1)
     }
-    for (const [name] of Array.from(counts).sort((a, b) => b[1] - a[1]).slice(0, 4)) add(name)
+    for (const [name] of Array.from(counts).sort((a, b) => b[1] - a[1]).slice(0, 8)) add(name)
   }
   return names
 }
 /**
  * Artists for the user (similar to the ones they listen to): the artists they are similar to, the artists
  */
-export const getArtistsForYou = async(isRefresh = false) => {
-  return load<{ seeds: string[], list: HomeArtist[] }>('for_you_v2', async() => {
+// (a new pick every time the page loads or is refreshed: the one before is shown while it loads)
+export const getArtistsForYou = async(_isRefresh = false) => {
+  return load<{ seeds: string[], list: HomeArtist[] }>('for_you', async() => {
     const top = await getTopArtists()
     // (enough to fill the row of a big window)
     return top.length ? getSimilarToTop(top, 28) : { seeds: [], list: [] }
-  }, isRefresh)
+  }, true)
 }
 export const getChartSongs = async(id: string, isRefresh = false) => {
   return load<LX.Music.MusicInfoOnline[]>('chart_' + id, async() => (await getBoardDetail(id, 1, isRefresh)).list, isRefresh)

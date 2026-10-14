@@ -374,6 +374,8 @@
   "search__type_album": "专辑",
   "stats__title": "统计",
   "artist__similar": "相似歌手",
+  "artist__radio": "电台",
+  "artist__radio_failed": "没有找到可用于这个电台的歌曲",
   "home__for_you_artists": "为你推荐的歌手",
   "home__for_you_because": "因为你在听 {names}",
   "setting__lastfm": "Last.fm",

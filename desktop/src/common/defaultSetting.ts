@@ -19,7 +19,7 @@ const defaultSetting: LX.AppSetting = {
   'common.randomAnimate': true,
   'common.isAgreePact': false,
   'common.controlBtnPosition': isMac ? 'left' : 'right',
-  'common.playBarProgressStyle': 'mini',
+  'common.playBarProgressStyle': 'middle',
   'common.transparentWindow': !isMac,
   'common.tryAutoUpdate': true,
   'common.showChangeLog': true,
@@ -73,7 +73,7 @@ const defaultSetting: LX.AppSetting = {
   'playDetail.style.align': 'center',
   'playDetail.isDelayScroll': true,
   'playDetail.style.fontWeight': true,
-  'playDetail.isDynamicBackground': false,
+  'playDetail.isDynamicBackground': true,
   // the cover of the song playing as the background of the app outside the player (the player: playDetail.isDynamicBackground)
   'theme.isDynamicBackground': false,
   'playDetail.coverStyle': 'cd',

@@ -1,10 +1,10 @@
 <template>
-  <base-tab :model-value="sortId" :list="list" item-label="name" min @change="handleToggle" />
+  <base-tab v-if="list.length" :model-value="sortId" :list="list" item-label="name" min @change="handleToggle" />
 </template>
 
 <script setup>
 import { watch, shallowReactive } from '@common/utils/vueTools'
-import { sortList } from '@renderer/store/songList/state'
+import { sortList, sortWithTag } from '@renderer/store/songList/state'
 import { useRouter, useRoute } from '@common/utils/vueRouter'
 
 const props = defineProps({
@@ -49,10 +49,10 @@ const handleToggle = (id) => {
     },
   })
 }
-watch(() => props.source, async(source) => {
-  // const source = (await getLeaderboardSetting()).source as LX.OnlineSource
+watch(() => [props.source, props.tagId], ([source, tagId]) => {
   if (!source) return
-  let _list = (sortList[source] ?? []).map(item => ({
+  // a category of a source that can't sort it: no sort shown
+  let _list = (tagId && !sortWithTag[source] ? [] : sortList[source] ?? []).map(item => ({
     ...item,
     name: getSortName(item.name),
   }))

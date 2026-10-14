@@ -20,6 +20,8 @@ export default {
       id: 'hot',
     },
   ],
+  // (the playlists of a category have no order: the sorts only apply to all of them)
+  isSortWithTag: false,
   regExps: {
     mInfo: /level:(\w+),bitrate:(\d+),format:(\w+),size:([\w.]+)/,
     // http://www.kuwo.cn/playlist_detail/2886046289
