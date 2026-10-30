@@ -2,6 +2,7 @@ import { computed, ref, reactive, nextTick } from '@common/utils/vueTools'
 import musicSdk from '@renderer/utils/musicSdk'
 import { useI18n } from '@renderer/plugins/i18n'
 import { hasDislike } from '@renderer/core/dislikeList'
+import { fmState } from '@renderer/core/recommend'
 
 export default ({
   props,
@@ -11,6 +12,7 @@ export default ({
   handleShowDownloadModal,
   handlePlayMusic,
   handlePlayMusicLater,
+  handleSongRadio,
   handleSearch,
   handleShowMusicAddModal,
   handleOpenMusicDetail,
@@ -45,6 +47,11 @@ export default ({
         name: t('list__play_later'),
         action: 'playLater',
         disabled: !itemMenuControl.playLater,
+      },
+      {
+        name: t('song_radio'),
+        action: 'songRadio',
+        disabled: fmState.loading,
       },
       {
         name: t('list__search'),
@@ -111,6 +118,9 @@ export default ({
         break
       case 'playLater':
         handlePlayMusicLater(index)
+        break
+      case 'songRadio':
+        handleSongRadio(index)
         break
       case 'search':
         handleSearch(index)

@@ -58,9 +58,9 @@ export default {
   transition: @transition-normal;
   transition-property: opacity;
 }
-// the cover over the color of the theme, as see-through as the text needs to keep its contrast (core/coverTone.ts)
+// the cover over the color of the theme (darkened in a dark theme): it keeps its colors (core/coverTone.ts)
 .dynamic {
-  background-color: var(--color-content-background);
+  background-color: color-mix(in srgb, var(--color-content-background) var(--cover-tint, 100%), black);
   opacity: 1;
 }
 .cover {

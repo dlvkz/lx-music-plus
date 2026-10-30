@@ -7,6 +7,7 @@ import { playNext } from '@renderer/core/player'
 import { playMusicInfo } from '@renderer/store/player/state'
 import { dialog } from '@renderer/plugins/Dialog'
 import { useI18n } from '@renderer/plugins/i18n'
+import { startSongRadio } from '@renderer/core/recommend'
 
 
 export default ({ props }) => {
@@ -44,10 +45,19 @@ export default ({ props }) => {
     }
   }
 
+  // the radio of the song: the song, then the songs like it (core/recommend.ts)
+  const handleSongRadio = async(index) => {
+    const minfo = props.list[index]
+    if (!minfo) return
+    const isStarted = await startSongRadio(minfo)
+    if (!isStarted) dialog({ message: t('artist__radio_failed'), confirmButtonText: t('close') })
+  }
+
 
   return {
     handleSearch,
     handleOpenMusicDetail,
     handleDislikeMusic,
+    handleSongRadio,
   }
 }

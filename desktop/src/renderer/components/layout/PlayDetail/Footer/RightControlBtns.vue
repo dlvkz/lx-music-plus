@@ -2,8 +2,8 @@
   <div :class="$style.container">
     <common-player-music-heart-btn />
     <common-playlist-btn />
-    <common-volume-btn />
     <common-toggle-play-mode-btn />
+    <common-volume-btn />
   </div>
 </template>
 

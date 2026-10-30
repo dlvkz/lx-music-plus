@@ -25,7 +25,7 @@ const PlayerBar = memo(({ isHome = false }: { isHome?: boolean }) => {
   const isDynamicBg = useSettingValue('playDetail.isDynamicBg')
   const bgPic = useBgPic()
   const pic = isDynamicBg ? bgPic : null
-  // (core/coverTone.ts: more of the color of the theme over a cover far from it)
+  // (core/coverTone.ts: the cover keeps its colors, darkened in a dark theme)
   const overlay = useCoverOverlay(pic, 0.72)
 
   const playerComponent = useMemo(() => (
@@ -36,7 +36,7 @@ const PlayerBar = memo(({ isHome = false }: { isHome?: boolean }) => {
               <View style={styles.bg}>
                 {/* (the cover before stays until the new one is drawn) */}
                 <CoverBackground style={styles.bgImage} uri={pic} blurRadius={20}>
-                  <View style={{ flex: 1, backgroundColor: theme['c-content-background'], opacity: overlay }} />
+                  <View style={{ flex: 1, backgroundColor: overlay.color, opacity: overlay.opacity }} />
                 </CoverBackground>
               </View>
             )

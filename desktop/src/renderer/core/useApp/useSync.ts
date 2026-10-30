@@ -3,6 +3,7 @@ import { onSyncAction, sendSyncAction } from '@renderer/utils/ipc'
 import { sync } from '@renderer/store'
 import { appSetting } from '@renderer/store/setting'
 import { SYNC_CODE } from '@common/constants_sync'
+import { getCollectionsSyncData, mergeCollectionsSyncData, onCollectionsChanged } from '@renderer/store/list/collections'
 
 export default () => {
   const handleSyncList = (event: LX.Sync.SyncMainWindowActions) => {
@@ -31,18 +32,32 @@ export default () => {
           if (!sync.isShowAuthCodeModal) sync.isShowAuthCodeModal = true
         } else if (sync.isShowAuthCodeModal) sync.isShowAuthCodeModal = false
         break
+      // the collected albums / artists of another device (main: modules/sync/collectionsEvent.ts)
+      case 'collections_merge':
+        mergeCollectionsSyncData(event.data)
+        void sendSyncAction({ action: 'collections_state', data: getCollectionsSyncData() })
+        break
     }
   }
 
   const rSyncAction = onSyncAction(({ params }) => {
     handleSyncList(params)
   })
+  // an album / artist collected or removed here: for the other devices
+  const rCollectionsChanged = onCollectionsChanged(() => {
+    void sendSyncAction({ action: 'collections_changed', data: getCollectionsSyncData() })
+  })
 
   onBeforeUnmount(() => {
     rSyncAction()
+    rCollectionsChanged()
   })
 
   return async() => {
+    // (the sync gets the collection of this window before it starts)
+    await sendSyncAction({ action: 'collections_state', data: getCollectionsSyncData() }).catch(err => {
+      console.log(err)
+    })
     sync.enable = appSetting['sync.enable']
     sync.mode = appSetting['sync.mode']
     sync.server.port = appSetting['sync.server.port']

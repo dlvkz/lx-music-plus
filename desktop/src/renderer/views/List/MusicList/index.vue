@@ -187,6 +187,7 @@ export default {
       handleCopyName,
       handleDislikeMusic,
       handleRemoveMusic,
+      handleSongRadio,
     } = useMusicActions({ props, list, removeAllSelect, selectedList })
 
     const {
@@ -202,6 +203,7 @@ export default {
       handleShowDownloadModal,
       handlePlayMusic,
       handlePlayMusicLater,
+      handleSongRadio,
       handleShowMusicToggleModal,
       handleSearch,
       handleShowMusicAddModal,

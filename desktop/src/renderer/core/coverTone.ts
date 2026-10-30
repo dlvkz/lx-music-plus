@@ -4,18 +4,25 @@ import { appSetting } from '@renderer/store/setting'
 import { themeInfo, themeShouldUseDarkColors } from '@renderer/store'
 import { findTheme, getThemes } from '@renderer/store/utils'
 
-// The dynamic background of the player (playDetail.isDynamicBackground) keeps the theme: the color of the theme over
-// the cover, as much of it as the cover needs. A light cover in a dark theme gets more of the dark color, a dark cover
-// in a light theme more of the light one. The light parts of a cover still come out grey in a dark theme (the dark
-// parts in a light one): the text and the buttons then get lighter (darker) so they keep their contrast over them
-// (mobile: core/coverTone.ts)
+// The dynamic background of the player (playDetail.isDynamicBackground) is the cover, its colors kept, made to fit the
+// theme. In a dark theme the cover is darkened (all its colors in the same measure, so they stay what they are) until
+// its light parts and its average are dark enough, a little of the color of the theme over it: never a bright
+// background in a dark theme. In a light theme the color of the theme goes over it, enough to bring its dark parts up
+// some way: a dark cover stays colorful there, darker than the theme. The text and the buttons move away from the
+// background when it comes near them: lighter in a dark theme, darker in a light one (mobile: core/coverTone.ts)
 
-// how far (L*, 0 - 1) the background may be from the background color of the theme (lighter in a dark theme, darker in
-// a light one)
-const BG_RANGE = 0.08
-// how much of the color of the theme is over the cover
-const MIN_OVERLAY = 0.6
-const MAX_OVERLAY = 0.9
+// a dark theme: how light the light parts of the background (90th percentile) and its average may be (L*, 0 - 1)
+const DARK_MAX_LIGHT = 0.42
+const DARK_MAX_MEAN = 0.28
+// how much of the color of the theme is over the darkened cover
+const DARK_TINT = 0.15
+// how dark the cover is made at most (its brightness, 0 - 1)
+const MIN_BRIGHTNESS = 0.2
+// a light theme: how far the color of the theme brings the dark parts (10th percentile) up, how much of it is over
+// the cover
+const LIGHT_MIN_DARK = 0.5
+const LIGHT_MIN_TINT = 0.3
+const LIGHT_MAX_TINT = 0.55
 // how far the lightest parts of the background (the darkest in a light theme) are from the color of the theme when the
 // text and the buttons start to move away from them, when they are as far as they go
 const FG_FROM = 0.03
@@ -31,13 +38,37 @@ const toLinear = (channel: number) => {
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 
 /**
- * How much of the color of the theme goes over a cover of this lightness (0 - 1)
+ * The background made of a cover: over the cover an overlay of the color of the theme (darkened in a dark theme)
+ */
+export interface CoverTone {
+  /** how solid the overlay is (0 - 1) */
+  overlay: number
+  /** how much of its color is the color of the theme, the rest black (0 - 1) */
+  tint: number
+  /** in the background: how much of the cover, how much of the color of the theme */
+  coverShare: number
+  themeShare: number
+}
+
+/**
+ * The background made of a cover of this lightness
  * @param themeLightness the lightness of the background color of the theme
  */
-export const getCoverOverlay = (lightness: number, isDark: boolean, themeLightness: number) => {
-  const target = isDark ? themeLightness + BG_RANGE : themeLightness - BG_RANGE
-  const overlay = (lightness - target) / (lightness - themeLightness)
-  return Number.isFinite(overlay) && overlay > 0 ? clamp(overlay, MIN_OVERLAY, MAX_OVERLAY) : MIN_OVERLAY
+export const getCoverTone = (cover: CoverLightness, isDark: boolean, themeLightness: number): CoverTone => {
+  if (isDark) {
+    const theme = DARK_TINT * themeLightness
+    // (a black cover: Infinity, kept as it is)
+    const brightness = clamp(Math.min(
+      (DARK_MAX_LIGHT - theme) / ((1 - DARK_TINT) * cover.light),
+      (DARK_MAX_MEAN - theme) / ((1 - DARK_TINT) * cover.mean),
+    ), MIN_BRIGHTNESS, 1)
+    const coverShare = (1 - DARK_TINT) * brightness
+    const overlay = 1 - coverShare
+    return { overlay, tint: DARK_TINT / overlay, coverShare, themeShare: DARK_TINT }
+  }
+  const range = themeLightness - cover.dark
+  const overlay = range > 0.01 ? clamp((LIGHT_MIN_DARK - cover.dark) / range, LIGHT_MIN_TINT, LIGHT_MAX_TINT) : LIGHT_MIN_TINT
+  return { overlay, tint: 1, coverShare: 1 - overlay, themeShare: overlay }
 }
 
 /**
@@ -45,9 +76,9 @@ export const getCoverOverlay = (lightness: number, isDark: boolean, themeLightne
  * @param cover the lightness of the cover: its average, its light parts, its dark parts
  */
 export const getForegroundMix = (cover: CoverLightness, isDark: boolean, themeLightness: number) => {
-  const overlay = getCoverOverlay(cover.mean, isDark, themeLightness)
-  // (the blurred cover under the color of the theme): its lightest parts in a dark theme, its darkest in a light one
-  const extreme = (1 - overlay) * (isDark ? cover.light : cover.dark) + overlay * themeLightness
+  const tone = getCoverTone(cover, isDark, themeLightness)
+  // (in the background): the lightest parts of the cover in a dark theme, its darkest in a light one
+  const extreme = tone.coverShare * (isDark ? cover.light : cover.dark) + tone.themeShare * themeLightness
   const distance = isDark ? extreme - themeLightness : themeLightness - extreme
   return MAX_FG_MIX * clamp((distance - FG_FROM) / (FG_FULL - FG_FROM), 0, 1)
 }
@@ -147,10 +178,14 @@ const FOREGROUND_VARS: Record<string, string> = {
   '--color-button-font': '--color-primary-alpha-100',
   '--color-button-font-selected': '--color-primary-dark-100-alpha-100',
 }
+// the dimmer text (the lyric lines not sung, labels): moved less, so it stays dimmer than the text
+const SECONDARY_VARS = ['--color-400', '--color-350', '--color-300', '--color-250']
+const SECONDARY_MIX = 0.7
 
 /**
- * The player and the play bar: how much of the color of the theme is over the cover (--cover-overlay), the text and
- * the buttons moved away from the background when it needs it; null: the defaults
+ * The player and the play bar: the overlay over the cover (--cover-overlay: how solid it is, --cover-tint: how much of
+ * the color of the theme is in it, the rest black), the text and the buttons moved away from the background when it
+ * needs it; null: the defaults
  */
 export const coverStyle = computed(() => {
   const lightness = coverLightness.value
@@ -160,7 +195,11 @@ export const coverStyle = computed(() => {
   const colors = (theme?.config.themeColors ?? {}) as unknown as Record<string, string>
   // (the background of the player and the play bar: --color-content-background)
   const themeLightness = colorLightness(colors['--color-primary-light-1000'], isDark ? 0.1 : 0.97)
-  const style: Record<string, string> = { '--cover-overlay': getCoverOverlay(lightness.mean, isDark, themeLightness).toFixed(3) }
+  const tone = getCoverTone(lightness, isDark, themeLightness)
+  const style: Record<string, string> = {
+    '--cover-overlay': tone.overlay.toFixed(3),
+    '--cover-tint': `${(tone.tint * 100).toFixed(1)}%`,
+  }
   const mix = getForegroundMix(lightness, isDark, themeLightness)
   if (!theme || mix < 0.02) return style
   const target = isDark ? 'white' : 'black'
@@ -170,6 +209,11 @@ export const coverStyle = computed(() => {
   for (const [name, source] of Object.entries(FOREGROUND_VARS)) {
     const color = colors[source]
     if (color) style[name] = `color-mix(in srgb, ${color} ${keep}%, ${target})`
+  }
+  const keepSecondary = Math.round((1 - mix * SECONDARY_MIX) * 100)
+  for (const name of SECONDARY_VARS) {
+    const color = colors[name]
+    if (color) style[name] = `color-mix(in srgb, ${color} ${keepSecondary}%, ${target})`
   }
   return style
 })

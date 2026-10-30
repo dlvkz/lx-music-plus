@@ -144,9 +144,10 @@ export default {
     }
     .bg {
       background-size: 125% 125%;
+      opacity: 1;
       &::before {
-        background-color: var(--color-content-background);
-        // (core/coverTone.ts: more over a cover far from the theme)
+        // the cover keeps its colors: darkened in a dark theme, the color of the theme over it (core/coverTone.ts)
+        background-color: color-mix(in srgb, var(--color-content-background) var(--cover-tint, 100%), black);
         opacity: var(--cover-overlay, 0.7);
       }
       &::after {

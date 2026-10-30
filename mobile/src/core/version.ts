@@ -1,11 +1,14 @@
 import { compareVer } from '@/utils'
-import { downloadNewVersion, getVersionInfo } from '@/utils/version'
+import { downloadNewVersion, getVersionInfo, isNewVersionDownloaded, removeInstalledApk } from '@/utils/version'
 import versionActions from '@/store/version/action'
 import versionState, { type InitState } from '@/store/version/state'
 import { getIgnoreVersion, getIgnoreVersionFailTipTime, saveIgnoreVersion, saveIgnoreVersionFailTipTime } from '@/utils/data'
 import { showVersionModal } from '@/navigation'
+import { showDialog } from '@/navigation/utils'
 import { Navigation } from 'react-native-navigation'
 import { toast } from '@/utils/tools'
+import { getData, saveData } from '@/plugins/storage'
+import publishInfo from '../../publish/version.json'
 
 export const showModal = () => {
   if (versionState.showModal) return
@@ -19,7 +22,11 @@ export const hideModal = (componentId: string) => {
   void Navigation.dismissOverlay(componentId)
 }
 
-export const checkUpdate = async() => {
+/**
+ * Check for a new version
+ * @param isShowModal show it when there is one (not when the changelog of the update just installed is shown)
+ */
+export const checkUpdate = async(isShowModal = true) => {
   versionActions.setVersionInfo({ status: 'checking' })
   let versionInfo: InitState['versionInfo'] = { ...versionState.versionInfo }
   try {
@@ -49,12 +56,15 @@ export const checkUpdate = async() => {
     versionInfo.isUnknown = false
     if (compareVer(versionInfo.version, versionInfo.newVersion.version) != -1) {
       versionInfo.isLatest = true
+    // downloaded before the app was restarted: it is installed from there
+    } else if (await isNewVersionDownloaded(versionInfo.newVersion.version)) {
+      versionInfo.status = 'downloaded'
     }
   }
 
   versionActions.setVersionInfo(versionInfo)
 
-  if (!versionInfo.isLatest) {
+  if (!versionInfo.isLatest && isShowModal) {
     if (versionInfo.isUnknown) {
       const time = await getIgnoreVersionFailTipTime()
       if (Date.now() - time < 7 * 86400000) return
@@ -66,6 +76,40 @@ export const checkUpdate = async() => {
   }
   // console.log(compareVer(process.versions.app, versionInfo.version))
   // console.log(process.versions.app, versionInfo.version)
+}
+
+const LAST_VERSION_KEY = '@last_run_version'
+
+/**
+ * The version run now is remembered (a first run: there is no changelog to show)
+ */
+export const saveRunVersion = async() => {
+  await saveData(LAST_VERSION_KEY, versionState.versionInfo.version)
+}
+
+/**
+ * After an update: what is new, once (the changelog of the versions since the one run before)
+ * @returns whether it is shown
+ */
+export const showChangelogAfterUpdate = async() => {
+  const current = versionState.versionInfo.version
+  const last = await getData<string>(LAST_VERSION_KEY).catch(() => null)
+  if (last == current) return false
+  await saveRunVersion()
+  void removeInstalledApk(current, compareVer)
+  // (an older version installed again: nothing new)
+  if (last && compareVer(last, current) >= 0) return false
+  // (updated from a version that didn't remember itself: the changelog of this version only)
+  const versions = [{ version: publishInfo.version, desc: publishInfo.desc }, ...publishInfo.history]
+    .filter(info => compareVer(info.version, current) <= 0 && (!last || compareVer(last, info.version) < 0))
+    .slice(0, last ? undefined : 1)
+  if (!versions.length) return false
+  void showDialog({
+    title: global.i18n.t('version_title_updated', { version: current }),
+    message: versions.map(info => versions.length > 1 ? `v${info.version}\n${info.desc}` : info.desc).join('\n\n'),
+    buttons: [{ text: global.i18n.t('version_btn_close'), value: true, primary: true }],
+  })
+  return true
 }
 
 export const downloadUpdate = () => {

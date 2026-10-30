@@ -25,6 +25,12 @@ declare namespace LX {
     }>
     type ServerSyncHandlerStatsActions<Socket> = WarpSyncHandlerActions<Socket, ServerSyncStatsActions>
 
+    // the collected albums / artists: the ones of the devices merged (utils/collectionsSync.ts), JSON
+    type ServerSyncCollectionsActions = WarpPromiseRecord<{
+      onCollectionsSyncAction: (data: string) => void
+    }>
+    type ServerSyncHandlerCollectionsActions<Socket> = WarpSyncHandlerActions<Socket, ServerSyncCollectionsActions>
+
     type ClientSyncActions = WarpPromiseRecord<{
       getEnabledFeatures: (serverType: ServerType, supportedFeatures: SupportedFeatures) => EnabledFeatures
       finished: () => void
@@ -57,6 +63,14 @@ declare namespace LX {
       stats_sync_finished: () => void
     }>
     type ClientSyncHandlerStatsActions<Socket> = WarpSyncHandlerActions<Socket, ClientSyncStatsActions>
+
+    type ClientSyncCollectionsActions = WarpPromiseRecord<{
+      onCollectionsSyncAction: (data: string) => void
+      collections_sync_get_data: () => string
+      collections_sync_set_data: (data: string) => void
+      collections_sync_finished: () => void
+    }>
+    type ClientSyncHandlerCollectionsActions<Socket> = WarpSyncHandlerActions<Socket, ClientSyncCollectionsActions>
     type ClientSyncHandlerDislikeActions<Socket> = WarpSyncHandlerActions<Socket, ClientSyncDislikeActions>
   }
 }

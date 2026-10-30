@@ -50,7 +50,7 @@ export default ({ children, navBarColor, player = false }: Props) => {
   const isPlayerDynamicBg = useSettingValue('playDetail.isDynamicBg')
   const isMenuDynamicBg = useSettingValue('theme.dynamicBg')
   const pic = (player ? isPlayerDynamicBg : isMenuDynamicBg) ? bgPic : null
-  // the player: more of the color of the theme over a cover far from it (core/coverTone.ts)
+  // the player: the cover keeps its colors, darkened in a dark theme, the color of the theme over it (core/coverTone.ts)
   const overlay = useCoverOverlay(player ? pic : null, 0.76)
   // const [wh, setWH] = useState<{ width: number | string, height: number | string }>({ width: '100%', height: Dimensions.get('screen').height })
 
@@ -95,7 +95,7 @@ export default ({ children, navBarColor, player = false }: Props) => {
           uri={pic!}
           blurRadius={BLUR_RADIUS}
         >
-          <View style={{ flex: 1, flexDirection: 'column', backgroundColor: theme['c-content-background'], opacity: overlay }}></View>
+          <View style={{ flex: 1, flexDirection: 'column', backgroundColor: overlay.color, opacity: overlay.opacity }}></View>
         </CoverBackground>
         <View style={{ flex: 1, flexDirection: 'column' }}>
           {children}

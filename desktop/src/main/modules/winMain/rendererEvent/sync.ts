@@ -13,6 +13,7 @@ import {
 } from '@main/modules/sync'
 import { sendEvent } from '../main'
 import { handleLocalStatsChanged } from '@main/modules/sync/statsEvent'
+import { handleLocalCollectionsChanged, setLocalCollectionsData } from '@main/modules/sync/collectionsEvent'
 
 
 let selectModeListenr: ((mode: LX.Sync.ModeTypes[keyof LX.Sync.ModeTypes] | null) => void) | null = null
@@ -31,6 +32,12 @@ export default () => {
       case 'generate_code': return generateCode()
       case 'stats_changed':
         handleLocalStatsChanged(data.data)
+        return
+      case 'collections_changed':
+        handleLocalCollectionsChanged(data.data)
+        return
+      case 'collections_state':
+        setLocalCollectionsData(data.data)
         return
       case 'select_mode':
         if (selectModeListenr) {

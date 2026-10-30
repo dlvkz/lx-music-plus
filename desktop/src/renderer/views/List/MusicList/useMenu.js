@@ -2,6 +2,7 @@ import { computed, ref, shallowReactive, reactive, nextTick } from '@common/util
 import musicSdk from '@renderer/utils/musicSdk'
 import { useI18n } from '@renderer/plugins/i18n'
 import { hasDislike } from '@renderer/core/dislikeList'
+import { fmState } from '@renderer/core/recommend'
 
 export default ({
   assertApiSupport,
@@ -10,6 +11,7 @@ export default ({
   handleShowDownloadModal,
   handlePlayMusic,
   handlePlayMusicLater,
+  handleSongRadio,
   handleSearch,
   handleShowMusicToggleModal,
   handleShowMusicAddModal,
@@ -54,6 +56,11 @@ export default ({
         name: t('list__play_later'),
         action: 'playLater',
         disabled: !itemMenuControl.playLater,
+      },
+      {
+        name: t('song_radio'),
+        action: 'songRadio',
+        disabled: fmState.loading,
       },
       {
         name: t('list__add_to'),
@@ -136,6 +143,9 @@ export default ({
         break
       case 'playLater':
         handlePlayMusicLater(index)
+        break
+      case 'songRadio':
+        handleSongRadio(index)
         break
       case 'copyName':
         handleCopyName(index)

@@ -33,6 +33,8 @@ declare namespace LX {
     | SyncAction<'server_status', ServerStatus>
     // the listening stats of another device (JSON) to merge into the ones of the window
     | SyncAction<'stats_merge', string>
+    // the collected albums / artists of another device (JSON) to merge into the ones of the window
+    | SyncAction<'collections_merge', string>
 
     type SyncServiceActions = SyncAction<'select_mode', ModeType>
     | SyncAction<'get_server_status'>
@@ -42,6 +44,9 @@ declare namespace LX {
     | SyncAction<'enable_client', EnableClient>
     // the plays recorded by the window (JSON), for the other devices
     | SyncAction<'stats_changed', string>
+    // the collected albums / artists of the window (JSON): changed there (for the other devices), or only its state
+    | SyncAction<'collections_changed', string>
+    | SyncAction<'collections_state', string>
 
     type ServerDevices = ServerKeyInfo[]
 
@@ -83,11 +88,16 @@ declare namespace LX {
     interface StatsConfig {
       skipSnapshot: boolean
     }
+    // the collected albums / artists: merged (no snapshot)
+    interface CollectionsConfig {
+      skipSnapshot: boolean
+    }
     type ServerType = 'desktop-app' | 'server'
     interface EnabledFeatures {
       list?: false | ListConfig
       dislike?: false | DislikeConfig
       stats?: false | StatsConfig
+      collections?: false | CollectionsConfig
     }
     type SupportedFeatures = Partial<{ [k in keyof EnabledFeatures]: number }>
   }

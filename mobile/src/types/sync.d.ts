@@ -26,6 +26,7 @@ declare global {
           list: boolean
           dislike: boolean
           stats: boolean
+          collections: boolean
         }
 
         onClose: (handler: (err: Error) => (void | Promise<void>)) => () => void
@@ -34,6 +35,7 @@ declare global {
         remoteQueueList: LX.Sync.ServerSyncListActions
         remoteQueueDislike: LX.Sync.ServerSyncDislikeActions
         remoteQueueStats: LX.Sync.ServerSyncStatsActions
+        remoteQueueCollections: LX.Sync.ServerSyncCollectionsActions
       }
 
 
@@ -61,11 +63,16 @@ declare global {
       interface StatsConfig {
         skipSnapshot: boolean
       }
+      // the collected albums / artists: merged (no snapshot)
+      interface CollectionsConfig {
+        skipSnapshot: boolean
+      }
       type ServerType = 'desktop-app' | 'server'
       interface EnabledFeatures {
         list?: false | ListConfig
         dislike?: false | DislikeConfig
         stats?: false | StatsConfig
+        collections?: false | CollectionsConfig
       }
       type SupportedFeatures = Partial<{ [k in keyof EnabledFeatures]: number }>
     }

@@ -26,6 +26,8 @@ export default () => {
   const PLAYED_TIME = 30
   let prevMusicInfo: LX.Music.MusicInfo | null = null
   let playedTime = 0
+  // the song really started: one skipped at once counts as skipped, one that failed to load doesn't
+  let isStarted = false
   const stopWatchProgress = watch(() => playProgress.nowPlayTime, time => {
     if (time > playedTime) playedTime = time
   })
@@ -34,9 +36,12 @@ export default () => {
     const musicInfo = info ? 'progress' in info ? info.metadata.musicInfo : info : null
     if (prevMusicInfo && prevMusicInfo.id != musicInfo?.id) {
       if (playedTime >= PLAYED_TIME || (playProgress.maxPlayTime > 0 && playedTime >= playProgress.maxPlayTime / 2)) recordPlay(prevMusicInfo, 'play')
-      else if (playedTime >= 2) recordPlay(prevMusicInfo, 'skip')
+      else if (playedTime >= 2 || isStarted) recordPlay(prevMusicInfo, 'skip')
     }
-    if (prevMusicInfo?.id != musicInfo?.id) playedTime = 0
+    if (prevMusicInfo?.id != musicInfo?.id) {
+      playedTime = 0
+      isStarted = false
+    }
     prevMusicInfo = musicInfo
   }
 
@@ -48,6 +53,7 @@ export default () => {
     isPending = true
   }
   const handlePlaying = () => {
+    isStarted = true
     if (!isPending) return
     isPending = false
     const info = playMusicInfo.musicInfo

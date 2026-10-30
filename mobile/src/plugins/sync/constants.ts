@@ -69,4 +69,5 @@ export const FeaturesList = [
   'list',
   'dislike',
   'stats',
+  'collections',
 ] as const

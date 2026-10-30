@@ -376,6 +376,7 @@
   "artist__similar": "Artistes similaires",
   "artist__radio": "Radio",
   "artist__radio_failed": "Aucun titre trouvé pour cette radio",
+  "song_radio": "Radio du titre",
   "home__for_you_artists": "Artistes pour vous",
   "home__for_you_because": "Parce que vous écoutez {names}",
   "setting__lastfm": "Last.fm",

@@ -166,11 +166,13 @@ const handleStartServer = async(port = 9527, ip = '0.0.0.0') => await new Promis
       list: false,
       dislike: false,
       stats: false,
+      collections: false,
     }
     socket.feature = {
       list: false,
       dislike: false,
       stats: false,
+      collections: false,
     }
     socket.on('pong', () => {
       socket.isAlive = true
@@ -210,6 +212,7 @@ const handleStartServer = async(port = 9527, ip = '0.0.0.0') => await new Promis
     socket.remoteQueueList = msg2call.createQueueRemote('list')
     socket.remoteQueueDislike = msg2call.createQueueRemote('dislike')
     socket.remoteQueueStats = msg2call.createQueueRemote('stats')
+    socket.remoteQueueCollections = msg2call.createQueueRemote('collections')
     socket.addEventListener('message', ({ data }) => {
       if (typeof data != 'string') return
       void decryptMsg(socket.keyInfo, data).then((data) => {

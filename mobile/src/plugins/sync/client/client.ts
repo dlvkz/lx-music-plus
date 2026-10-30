@@ -228,6 +228,7 @@ export const connect = (urlInfo: LX.Sync.UrlInfo, keyInfo: LX.Sync.KeyInfo) => {
   client.remoteQueueList = message2read.createQueueRemote('list')
   client.remoteQueueDislike = message2read.createQueueRemote('dislike')
   client.remoteQueueStats = message2read.createQueueRemote('stats')
+  client.remoteQueueCollections = message2read.createQueueRemote('collections')
 
   const socket = client
   client.addEventListener('message', ({ data }) => {
@@ -267,6 +268,7 @@ export const connect = (urlInfo: LX.Sync.UrlInfo, keyInfo: LX.Sync.KeyInfo) => {
       list: false,
       dislike: false,
       stats: false,
+      collections: false,
     }
     disconnected = false
     sendSyncStatus({

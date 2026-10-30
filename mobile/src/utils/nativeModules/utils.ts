@@ -8,6 +8,11 @@ export const getSupportedAbis = UtilsModule.getSupportedAbis
 
 export const installApk = (filePath: string, fileProviderAuthority: string) => UtilsModule.installApk(filePath, fileProviderAuthority)
 
+/**
+ * Whether the app may install apps ("Install unknown apps")
+ */
+export const canInstallApk = async(): Promise<boolean> => UtilsModule.canInstallApk()
+
 
 export const screenkeepAwake = () => {
   if (global.lx.isScreenKeepAwake) return

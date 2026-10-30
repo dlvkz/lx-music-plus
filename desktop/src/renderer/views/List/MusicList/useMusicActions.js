@@ -9,6 +9,7 @@ import { formatMusicName, toOldMusicInfo } from '@renderer/utils/index'
 import { addDislikeInfo, hasDislike } from '@renderer/core/dislikeList'
 import { playNext } from '@renderer/core/player'
 import { playMusicInfo } from '@renderer/store/player/state'
+import { startSongRadio } from '@renderer/core/recommend'
 
 
 export default ({ props, list, selectedList, removeAllSelect }) => {
@@ -51,6 +52,14 @@ export default ({ props, list, selectedList, removeAllSelect }) => {
     }
   }
 
+  // the radio of the song: the song, then the songs like it (core/recommend.ts)
+  const handleSongRadio = async(index) => {
+    const minfo = list.value[index]
+    if (!minfo) return
+    const isStarted = await startSongRadio(minfo)
+    if (!isStarted) dialog({ message: t('artist__radio_failed'), confirmButtonText: t('close') })
+  }
+
   const handleRemoveMusic = async(index, single) => {
     if (selectedList.value.length && !single) {
       const confirm = await (selectedList.value.length > 1
@@ -74,5 +83,6 @@ export default ({ props, list, selectedList, removeAllSelect }) => {
     handleCopyName,
     handleDislikeMusic,
     handleRemoveMusic,
+    handleSongRadio,
   }
 }

@@ -132,6 +132,16 @@ public class UtilsModule extends ReactContextBaseJavaModule {
     promise.resolve(array);
   }
 
+  // whether the app may install apps (Android 8+: "Install unknown apps", granted by the user in the settings)
+  @ReactMethod
+  public void canInstallApk(Promise promise) {
+    if (Build.VERSION.SDK_INT < 26) {
+      promise.resolve(true);
+      return;
+    }
+    promise.resolve(reactContext.getPackageManager().canRequestPackageInstalls());
+  }
+
   @ReactMethod
   public void installApk(String filePath, String fileProviderAuthority, Promise promise) {
     // https://github.com/mikehardy/react-native-update-apk/blob/master/android/src/main/java/net/mikehardy/rnupdateapk/RNUpdateAPK.java

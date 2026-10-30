@@ -204,6 +204,7 @@ export const connect = (urlInfo: LX.Sync.Client.UrlInfo, keyInfo: LX.Sync.Client
   client.remoteQueueList = message2read.createQueueRemote('list')
   client.remoteQueueDislike = message2read.createQueueRemote('dislike')
   client.remoteQueueStats = message2read.createQueueRemote('stats')
+  client.remoteQueueCollections = message2read.createQueueRemote('collections')
 
   client.addEventListener('message', ({ data }) => {
     if (data == 'ping') return
@@ -241,6 +242,7 @@ export const connect = (urlInfo: LX.Sync.Client.UrlInfo, keyInfo: LX.Sync.Client
       list: false,
       dislike: false,
       stats: false,
+      collections: false,
     }
     disconnected = false
     sendSyncStatus({

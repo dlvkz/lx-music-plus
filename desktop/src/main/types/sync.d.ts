@@ -17,6 +17,7 @@ declare global {
             list: boolean
             dislike: boolean
             stats: boolean
+            collections: boolean
           }
 
           onClose: (handler: (err: Error) => (void | Promise<void>)) => () => void
@@ -24,6 +25,7 @@ declare global {
           remoteQueueList: LX.Sync.ServerSyncListActions
           remoteQueueDislike: LX.Sync.ServerSyncDislikeActions
           remoteQueueStats: LX.Sync.ServerSyncStatsActions
+          remoteQueueCollections: LX.Sync.ServerSyncCollectionsActions
         }
 
         interface UrlInfo {
@@ -44,6 +46,7 @@ declare global {
             list: boolean
             dislike: boolean
             stats: boolean
+            collections: boolean
           }
 
           onClose: (handler: (err: Error) => (void | Promise<void>)) => () => void
@@ -53,6 +56,7 @@ declare global {
           remoteQueueList: LX.Sync.ClientSyncListActions
           remoteQueueDislike: LX.Sync.ClientSyncDislikeActions
           remoteQueueStats: LX.Sync.ClientSyncStatsActions
+          remoteQueueCollections: LX.Sync.ClientSyncCollectionsActions
         }
         type SocketServer = WS.Server<Socket>
       }

@@ -376,6 +376,7 @@
   "artist__similar": "相似歌手",
   "artist__radio": "電台",
   "artist__radio_failed": "沒有找到可用於這個電台的歌曲",
+  "song_radio": "單曲電台",
   "home__for_you_artists": "為你推薦的歌手",
   "home__for_you_because": "因為你在聽 {names}",
   "setting__lastfm": "Last.fm",

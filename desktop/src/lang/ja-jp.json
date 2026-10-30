@@ -376,6 +376,7 @@
   "artist__similar": "似ているアーティスト",
   "artist__radio": "ラジオ",
   "artist__radio_failed": "このラジオの曲が見つかりませんでした",
+  "song_radio": "この曲のラジオ",
   "home__for_you_artists": "あなたへのおすすめアーティスト",
   "home__for_you_because": "{names}を聴いているあなたに",
   "setting__lastfm": "Last.fm",

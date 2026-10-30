@@ -1,27 +1,16 @@
 <template>
-  <material-popup-btn :class="$style.btnContent">
-    <button :class="$style.btn" :aria-label="label" @wheel="handleWheel">
+  <!-- the volume: always shown, the icon mutes / unmutes, the wheel changes it too -->
+  <div :class="$style.container" @wheel="handleWheel">
+    <button :class="$style.btn" :aria-label="label" @click="handleToggleMute">
       <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" width="100%" viewBox="0 0 24 24" space="preserve">
         <use :xlink:href="icon" />
       </svg>
     </button>
-    <template #content>
-      <!-- no audio output device: why there is no sound -->
-      <p v-if="noAudioDevice" :class="$style.noDevice">{{ $t('media_device__empty_device_tip') }}</p>
-      <div v-else :class="$style.setting">
-        <div :class="$style.info">
-          <span>{{ Math.trunc(volume * 100) }}%</span>
-          <base-checkbox
-            id="player__volume_mute"
-            :model-value="isMute"
-            :label="$t('player__volume_mute_label')"
-            @update:model-value="saveVolumeIsMute($event)"
-          />
-        </div>
-        <base-slider-bar :class="$style.slider" :value="volume" :min="0" :max="1" :step="0.01" @change="handleUpdateVolume" />
-      </div>
-    </template>
-  </material-popup-btn>
+    <base-slider-bar
+      :class="[$style.slider, { [$style.sliderMuted]: isMute }]" :aria-label="label"
+      :value="volume" :min="0" :max="1" :step="0.01" :disabled="noAudioDevice" @change="handleUpdateVolume"
+    />
+  </div>
 </template>
 
 <script setup>
@@ -37,7 +26,14 @@ const handleWheel = (event) => {
 }
 
 const handleUpdateVolume = (val) => {
+  // (set while muted: heard again)
+  if (isMute.value) saveVolumeIsMute(false)
   window.app_event.setVolume(val)
+}
+
+const handleToggleMute = () => {
+  if (noAudioDevice.value) return
+  saveVolumeIsMute(!isMute.value)
 }
 
 // (no audio output device: muted, its tip tells why)
@@ -62,8 +58,12 @@ const icon = computed(() => {
 
 <style lang="less" module>
 @import '@renderer/assets/styles/layout.less';
-.btnContent {
+.container {
+  display: flex;
   flex: none;
+  flex-flow: row nowrap;
+  align-items: center;
+  gap: 8px;
   height: 100%;
 }
 
@@ -98,35 +98,12 @@ const icon = computed(() => {
   }
 }
 
-.setting {
-  display: flex;
-  flex-flow: column nowrap;
-  padding: 2px 3px;
-  gap: 8px;
-  width: 140px;
-}
-
-.info {
-  display: flex;
-  flex-flow: row nowrap;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 13px;
-  span {
-    line-height: 1.2;
-  }
-}
-
 .slider {
-  width: 100%;
+  width: 60px;
 }
-
-.noDevice {
-  width: 240px;
-  padding: 2px 3px;
-  font-size: 12px;
-  line-height: 1.5;
-  white-space: pre-line;
+// muted: the volume it comes back to, dimmed
+.sliderMuted {
+  opacity: 0.4;
 }
 
 </style>

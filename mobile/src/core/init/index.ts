@@ -16,7 +16,7 @@ import { setApiSource } from '@/core/apiSource'
 import { initDataCache } from '@/utils/dataCache'
 import commonActions from '@/store/common/action'
 import settingState from '@/store/setting/state'
-import { checkUpdate } from '@/core/version'
+import { checkUpdate, saveRunVersion, showChangelogAfterUpdate } from '@/core/version'
 import { bootLog } from '@/utils/bootLog'
 
 const LANGUAGE_PICKED_KEY = '@language_picked'
@@ -29,9 +29,14 @@ const handlePushedHomeScreen = async() => {
     isFirstPush = false
     void initDownload()
     if (settingState.setting['common.isAgreePact']) {
-      void checkUpdate()
+      // just updated: what is new, else a new version when there is one
+      void showChangelogAfterUpdate().catch(() => false).then(async isShown => checkUpdate(!isShown))
       void initDeeplink()
-    } else showPactModal()
+    } else {
+      // a first run
+      void saveRunVersion()
+      showPactModal()
+    }
   }
 }
 

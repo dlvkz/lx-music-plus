@@ -5,6 +5,7 @@ import { useRef, useImperativeHandle, forwardRef, useState } from 'react'
 import { useI18n } from '@/lang'
 import Menu, { type Menus, type MenuType, type Position } from '@/components/common/Menu'
 import { hasDislike } from '@/core/dislikeList'
+import { fmState, startSongRadio } from '@/core/recommend'
 import { existsFile } from '@/utils/fs'
 import { hasMusicUrlByMusic } from '@/utils/data'
 
@@ -74,6 +75,7 @@ export default forwardRef<ListMenuType, ListMenuProps>((props, ref) => {
     const menu = [
       { action: 'play', label: t('play') },
       { action: 'playLater', label: t('play_later') },
+      { action: 'songRadio', label: t('song_radio'), disabled: fmState.loading },
       { action: 'download', label: t('download'), disabled: musicInfo.source == 'local' || !!getDownloadTask(musicInfo.id) },
       { action: 'add', label: t('add_to') },
       { action: 'artist', label: t('music_link_artist') },
@@ -121,6 +123,12 @@ export default forwardRef<ListMenuType, ListMenuProps>((props, ref) => {
       case 'download':
         void downloadMusics([selectInfo.musicInfo]).then(count => {
           if (count) toast(global.i18n.t('download__added'))
+        })
+        break
+      // the radio of the song: the song, then the songs like it (core/recommend.ts)
+      case 'songRadio':
+        void startSongRadio(selectInfo.musicInfo).then(isStarted => {
+          if (!isStarted) toast(global.i18n.t('artist__radio_failed'))
         })
         break
       case 'artist':
