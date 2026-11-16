@@ -12,7 +12,10 @@ import {
   setPlayMusicInfo,
   setMusicInfo,
   setPlayListId,
+  updatePlayIndex,
 } from '@/core/player/playInfo'
+import playerActions from '@/store/player/action'
+import { getDownloadedFilePath } from '@/core/download'
 import {
   clearPlayedList,
   addPlayedList,
@@ -101,6 +104,10 @@ const getMusicPlayUrl = async(musicInfo: LX.Music.MusicInfo | LX.Download.ListIt
   // this.musicInfo.url = await getMusicPlayUrl(targetSong, type)
   setStatusText(global.i18n.t('player__getting_url'))
   addLoadTimeout()
+
+  // a song downloaded plays from its file, before the song of another source it was switched to
+  const filePath = 'progress' in musicInfo ? null : await getDownloadedFilePath(musicInfo.id).catch(() => null)
+  if (filePath) return global.lx.isPlayedStop || diffCurrentMusicInfo(musicInfo) ? null : `file://${filePath}`
 
   // const type = getPlayType(settingState.setting['player.isPlayHighQuality'], musicInfo)
   let toggleMusicInfo = ('progress' in musicInfo ? musicInfo.metadata.musicInfo : musicInfo).meta.toggleMusicInfo
@@ -299,6 +306,23 @@ export const playListById = async(listId: string, id: string) => {
  * @param listId 列表id
  * @param index 播放的歌曲位置
  */
+/**
+ * The song playing goes on in another list that has it (the radio of the song playing): the songs after it change,
+ * the song isn't played again from the start
+ * @returns false when the list doesn't have the song playing
+ */
+export const continueInList = (listId: string): boolean => {
+  const musicInfo = playerState.playMusicInfo.musicInfo
+  if (!musicInfo || 'progress' in musicInfo || !getList(listId).some(m => m.id == musicInfo.id)) return false
+  const prevListId = playerState.playInfo.playerListId
+  setPlayListId(listId)
+  playerActions.setPlayMusicInfo(listId, musicInfo, false)
+  updatePlayIndex()
+  if (settingState.setting['player.isAutoCleanPlayedList'] || prevListId != listId) clearPlayedList()
+  clearTempPlayeList()
+  return true
+}
+
 export const playList = async(listId: string, index: number) => {
   const prevListId = playerState.playInfo.playerListId
   setPlayListId(listId)

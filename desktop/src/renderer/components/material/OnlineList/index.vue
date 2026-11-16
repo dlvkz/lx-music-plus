@@ -209,6 +209,7 @@ export default {
       handleOpenMusicDetail,
       handleDislikeMusic,
       handleSongRadio,
+      handleOpenFile,
     } = useMusicActions({ props })
 
     const {
@@ -226,6 +227,7 @@ export default {
       handlePlayMusic,
       handlePlayMusicLater,
       handleSongRadio,
+      handleOpenFile,
       handleSearch,
       handleShowMusicAddModal,
       handleOpenMusicDetail,

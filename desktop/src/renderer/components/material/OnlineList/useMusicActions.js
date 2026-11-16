@@ -8,6 +8,9 @@ import { playMusicInfo } from '@renderer/store/player/state'
 import { dialog } from '@renderer/plugins/Dialog'
 import { useI18n } from '@renderer/plugins/i18n'
 import { startSongRadio } from '@renderer/core/recommend'
+import { getDownloadedFilePath } from '@renderer/core/music/downloaded'
+import { openDirInExplorer } from '@renderer/utils/ipc'
+import { checkPath } from '@common/utils/nodejs'
 
 
 export default ({ props }) => {
@@ -53,11 +56,21 @@ export default ({ props }) => {
     if (!isStarted) dialog({ message: t('artist__radio_failed'), confirmButtonText: t('close') })
   }
 
+  // the file of a song downloaded or of a local song, shown in its folder
+  const handleOpenFile = async(index) => {
+    const minfo = props.list[index]
+    if (!minfo) return
+    const path = minfo.source == 'local' ? minfo.meta.filePath : await getDownloadedFilePath(minfo)
+    if (!path || !await checkPath(path)) return
+    openDirInExplorer(path)
+  }
+
 
   return {
     handleSearch,
     handleOpenMusicDetail,
     handleDislikeMusic,
     handleSongRadio,
+    handleOpenFile,
   }
 }

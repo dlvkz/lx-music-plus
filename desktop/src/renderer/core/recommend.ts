@@ -12,7 +12,7 @@ import { getListDetail as getPlaylistDetail } from '@renderer/store/songList/act
 import { playMusicInfo, playInfo } from '@renderer/store/player/state'
 import { hasDislike } from '@renderer/core/dislikeList'
 import { assertApiSupport } from '@renderer/store/utils'
-import { playList } from '@renderer/core/player/action'
+import { playList, continueInList } from '@renderer/core/player/action'
 import { RADIO_LIST_ID } from '@renderer/core/player/playMethod'
 import { setPlayingFrom, type PlayingFromRoute } from '@renderer/store/list/playingFrom'
 import { appSetting } from '@renderer/store/setting'
@@ -731,7 +731,10 @@ export const startSeedRadio = async(seed: RadioSeed, route?: PlayingFromRoute): 
     // the radio of a song starts with it
     if (seed.type == 'song' && seed.songs.length) list = [seed.songs[0], ...list.filter(m => getKey(m) != getKey(seed.songs[0]))]
     if (!list.length) return false
-    await playRadio(list, seed, route)
+    // the radio of the song playing: the song goes on, the radio comes after it
+    const playing = getPlayingMusic()
+    const isPlayingSeed = seed.type == 'song' && !!playing && playing.id == seed.songs[0]?.id
+    await playRadio(list, seed, route, isPlayingSeed)
     return true
   } finally {
     // eslint-disable-next-line require-atomic-updates
@@ -746,14 +749,14 @@ export const startSongRadio = async(musicInfo: LX.Music.MusicInfo) => {
   return startSeedRadio({ type: 'song', name: musicInfo.name, songs: [musicInfo as Music] })
 }
 
-const playRadio = async(list: Music[], seed: RadioSeed | null, route?: PlayingFromRoute) => {
+const playRadio = async(list: Music[], seed: RadioSeed | null, route?: PlayingFromRoute, isContinue = false) => {
   fmQueue = list
   fmDropped = []
   setFmSeed(seed)
   // (the queue shows what is playing: the radio, or the radio of an artist / a list with a link to its page)
   setPlayingFrom(FM_LIST_ID, 'radio', seed?.name ?? '', route)
   await setTempList(FM_LIST_ID, [...list])
-  playList(LIST_IDS.TEMP, 0)
+  if (!isContinue || !continueInList(LIST_IDS.TEMP)) playList(LIST_IDS.TEMP, 0)
   fmState.active = true
 }
 

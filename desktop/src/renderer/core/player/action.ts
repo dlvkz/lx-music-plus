@@ -11,11 +11,13 @@ import {
   removeTempPlayList,
   setPlayListId,
   removePlayedList,
+  updatePlayIndex,
 } from '@renderer/store/player/action'
 import { appSetting } from '@renderer/store/setting'
 import { getPlayMethod } from './playMethod'
 import { pickShuffleNext, resetShuffleOrder } from './shuffleOrder'
 import { getMusicUrl, getPicPath, getLyricInfo } from '../music/index'
+import { getDownloadedFilePath } from '../music/downloaded'
 import { filterList } from './utils'
 import { requestMsg } from '@renderer/utils/message'
 import { getRandom } from '@renderer/utils/index'
@@ -92,6 +94,10 @@ const getMusicPlayUrl = async(musicInfo: LX.Music.MusicInfo | LX.Download.ListIt
   // this.musicInfo.url = await getMusicPlayUrl(targetSong, type)
   setAllStatus(window.i18n.t('player__getting_url'))
   if (appSetting['player.autoSkipOnError']) addLoadTimeout()
+
+  // a song downloaded plays from its file, before the song of another source it was switched to
+  const filePath = await getDownloadedFilePath(musicInfo).catch(() => '')
+  if (filePath) return window.lx.isPlayedStop || diffCurrentMusicInfo(musicInfo) ? null : filePath
 
   // const type = getPlayType(appSetting['player.highQuality'], musicInfo)
   let toggleMusicInfo = ('progress' in musicInfo ? musicInfo.metadata.musicInfo : musicInfo).meta.toggleMusicInfo
@@ -272,6 +278,25 @@ export const playList = (listId: string, index: number) => {
   if (appSetting['player.isAutoCleanPlayedList'] || prevListId != listId) clearPlayedList()
   clearTempPlayeList()
   handlePlay()
+}
+
+/**
+ * The song playing goes on in another list that has it (the radio of the song playing): the songs after it change,
+ * the song isn't played again from the start
+ * @returns false when the list doesn't have the song playing
+ */
+export const continueInList = (listId: string): boolean => {
+  const musicInfo = playMusicInfo.musicInfo
+  // (a song of the downloads is another item than the song of the list)
+  if (!musicInfo || 'progress' in musicInfo || !getList(listId).some(m => m.id == musicInfo.id)) return false
+  const prevListId = playInfo.playerListId
+  setPlayListId(listId)
+  playMusicInfo.listId = listId
+  playMusicInfo.isTempPlay = false
+  updatePlayIndex()
+  if (appSetting['player.isAutoCleanPlayedList'] || prevListId != listId) clearPlayedList()
+  clearTempPlayeList()
+  return true
 }
 
 const handleToggleStop = () => {

@@ -140,6 +140,14 @@ export default (setting: any): Partial<LX.AppSetting> => {
     setting.version = '2.1.0'
   }
 
+  // the volume is heard on a curve since 2.2.0 (renderer/plugins/player: gain = 0.5 * volume ^ 3): the volume saved,
+  // the gain itself before, becomes the place of the slider that sounds the same
+  if (compareVer(setting.version, '2.2.0') < 0) {
+    const volume = setting['player.volume']
+    if (typeof volume == 'number') setting['player.volume'] = Math.min(Math.round(Math.cbrt(Math.max(volume, 0) / 0.5) * 100) / 100, 1)
+    setting.version = '2.2.0'
+  }
+
 
   return setting
 }

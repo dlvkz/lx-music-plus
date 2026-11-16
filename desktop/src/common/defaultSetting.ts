@@ -5,7 +5,7 @@ const isMac = process.platform == 'darwin'
 const isWin = process.platform == 'win32'
 
 const defaultSetting: LX.AppSetting = {
-  version: '2.1.0',
+  version: '2.2.0',
 
   'common.windowSizeId': 3,
   'common.fontSize': 16,

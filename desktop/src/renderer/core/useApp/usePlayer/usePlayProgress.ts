@@ -4,7 +4,7 @@ import { throttle } from '@common/utils'
 import { savePlayInfo } from '@renderer/utils/ipc'
 import { onTimeupdate, getCurrentTime, getDuration, setCurrentTime, onVisibilityChange } from '@renderer/plugins/player'
 import { playProgress, setNowPlayTime, setMaxplayTime } from '@renderer/store/player/playProgress'
-import { musicInfo, playMusicInfo, playInfo } from '@renderer/store/player/state'
+import { musicInfo, playMusicInfo, playInfo, isPlay } from '@renderer/store/player/state'
 // import { getList } from '@renderer/store/utils'
 import { appSetting } from '@renderer/store/setting'
 import { playNext } from '@renderer/core/player'
@@ -179,6 +179,22 @@ export default () => {
     setNowPlayTime(getCurrentTime())
   })
 
+  // the bar moves on every frame while a song plays and the window is seen (the time of the player comes only about
+  // 4 times a second: the bar went forward in steps)
+  let frameId: number | null = null
+  const updateFrame = () => {
+    frameId = null
+    if (!isPlay.value || document.hidden || !playProgress.maxPlayTime) return
+    playProgress.progress = Math.min(getCurrentTime() / playProgress.maxPlayTime, 1)
+    frameId = requestAnimationFrame(updateFrame)
+  }
+  const startFrames = () => {
+    frameId ??= requestAnimationFrame(updateFrame)
+  }
+  watch(isPlay, play => {
+    if (play) startFrames()
+  })
+
   let currentPlayTime = 0
   const rVisibilityChange = onVisibilityChange(() => {
     if (document.hidden) {
@@ -187,10 +203,12 @@ export default () => {
       if (Math.abs(playProgress.nowPlayTime - currentPlayTime) > 2) {
         window.app_event.activePlayProgressTransition()
       }
+      startFrames()
     }
   })
 
   onBeforeUnmount(() => {
+    if (frameId != null) cancelAnimationFrame(frameId)
     rOnTimeupdate()
     rVisibilityChange()
     // window.app_event.off('play', handlePlay)

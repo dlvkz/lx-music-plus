@@ -1,12 +1,19 @@
 <template>
   <div :class="$style.container">
-    <p :class="[$style.title, $style.clickable]" @click="handleTitleClick">
-      <common-translatable-text :text="musicInfo.name" />
-    </p>
-    <p :class="$style.artists">
-      <common-artist-names :singer="musicInfo.singer" :music-info="artistInfo" inline />
-    </p>
-    <p :class="$style.statusText">{{ statusText }}</p>
+    <!-- the song, the + to add it to a list right after it -->
+    <div :class="$style.head">
+      <div :class="$style.names">
+        <p :class="[$style.title, $style.clickable]" @click="handleTitleClick">
+          <common-translatable-text :text="musicInfo.name" />
+        </p>
+        <p :class="$style.artists">
+          <common-artist-names :singer="musicInfo.singer" :music-info="artistInfo" inline />
+        </p>
+      </div>
+      <common-add-to-list-btn v-if="playingMusic" :music-info="playingMusic" />
+    </div>
+    <!-- (the line of the lyrics playing: a click on it opens the player) -->
+    <p :class="[$style.statusText, { [$style.clickable]: playMusicInfo.musicInfo }]" @click="handleStatusClick">{{ statusText }}</p>
   </div>
 </template>
 
@@ -15,6 +22,7 @@ import { computed } from '@common/utils/vueTools'
 import { useRouter } from '@common/utils/vueRouter'
 import { clipboardWriteText } from '@common/utils/electron'
 import { musicInfo, statusText, playMusicInfo } from '@renderer/store/player/state'
+import { setShowPlayerDetail } from '@renderer/store/player/action'
 import { isSecondarySource } from '@renderer/utils/secondarySources'
 import { openSecondarySongAlbum } from '@renderer/utils/songLinks'
 
@@ -51,6 +59,10 @@ const albumInfo = computed(() => {
   return { source, id: String(albumId), name: meta.albumName ?? musicInfo.album ?? '' }
 })
 
+const handleStatusClick = () => {
+  if (playMusicInfo.musicInfo) setShowPlayerDetail(true)
+}
+
 const handleTitleClick = () => {
   if (albumInfo.value?.secondary) {
     void openSecondarySongAlbum(router, playingMusic.value)
@@ -76,6 +88,17 @@ const handleTitleClick = () => {
   flex: auto;
   min-width: 0;
   contain: content;
+}
+.head {
+  display: flex;
+  flex-flow: row nowrap;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+}
+.names {
+  flex: 0 1 auto;
+  min-width: 0;
 }
 .title {
   padding: 1px 0;
@@ -106,5 +129,8 @@ const handleTitleClick = () => {
   font-size: 13px;
   color: var(--color-primary-font);
   .mixin-ellipsis-1();
+  &.clickable {
+    cursor: pointer;
+  }
 }
 </style>

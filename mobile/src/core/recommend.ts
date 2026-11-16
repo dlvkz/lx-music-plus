@@ -11,7 +11,7 @@ import listState from '@/store/list/state'
 import playerState from '@/store/player/state'
 import { getListDetail as getPlaylistDetail } from '@/core/songlist'
 import { hasDislike } from '@/core/dislikeList'
-import { playList } from '@/core/player/player'
+import { playList, continueInList } from '@/core/player/player'
 import { RADIO_LIST_ID } from '@/core/player/playMethod'
 import { setPlayingFrom, type PlayingFromTarget } from '@/core/playingFrom'
 import settingState from '@/store/setting/state'
@@ -745,7 +745,10 @@ export const startSeedRadio = async(seed: RadioSeed, target?: PlayingFromTarget)
     // the radio of a song starts with it
     if (seed.type == 'song' && seed.songs.length) list = [seed.songs[0], ...list.filter(m => getKey(m) != getKey(seed.songs[0]))]
     if (!list.length) return false
-    await playRadio(list, seed, target)
+    // the radio of the song playing: the song goes on, the radio comes after it
+    const playing = getPlayingMusic()
+    const isPlayingSeed = seed.type == 'song' && !!playing && playing.id == seed.songs[0]?.id
+    await playRadio(list, seed, target, isPlayingSeed)
     return true
   } finally {
     setFmState({ loading: false })
@@ -759,14 +762,14 @@ export const startSongRadio = async(musicInfo: LX.Music.MusicInfo) => {
   return startSeedRadio({ type: 'song', name: musicInfo.name, songs: [musicInfo as Music] })
 }
 
-const playRadio = async(list: Music[], seed: RadioSeed | null, target?: PlayingFromTarget) => {
+const playRadio = async(list: Music[], seed: RadioSeed | null, target?: PlayingFromTarget, isContinue = false) => {
   fmQueue = list
   fmDropped = []
   setFmSeed(seed)
   // (the player shows what is playing: the radio, or the radio of an artist / a list with a link to its page)
   setPlayingFrom(FM_LIST_ID, 'radio', seed?.name ?? '', target)
   await setTempList(FM_LIST_ID, [...list])
-  void playList(LIST_IDS.TEMP, 0)
+  if (!isContinue || !continueInList(LIST_IDS.TEMP)) void playList(LIST_IDS.TEMP, 0)
   setFmState({ active: true })
 }
 

@@ -449,13 +449,57 @@ export const setCurrentTime = (time: number) => {
   if (audio) audio.currentTime = time
 }
 
+let currentMediaDeviceId = ''
 export const setMediaDeviceId = async(mediaDeviceId: string): Promise<void> => {
   if (!audio) return
-  return audio.setSinkId(mediaDeviceId)
+  await audio.setSinkId(mediaDeviceId)
+  currentMediaDeviceId = mediaDeviceId
 }
 
+interface AudioContextSink extends AudioContext {
+  setSinkId?: (id: string | { type: 'none' }) => Promise<void>
+}
+/**
+ * The output of the sound is opened again on the device of now. An output opened while the device wasn't there yet
+ * (the app started with the computer, before the sound of the computer) stays silent: setting the same device again
+ * does nothing, the output goes to another one (the same device by another name: "default" / "") and back.
+ * (with the sound effects the sound goes out of the audio context, not of the element, which can't change its device
+ * then: the output of the audio context is opened again)
+ */
+export const refreshAudioOutput = async() => {
+  if (!audio) return
+  if (audioContext) {
+    const context = audioContext as AudioContextSink
+    if (context.setSinkId) {
+      await context.setSinkId({ type: 'none' }).then(async() => context.setSinkId?.('')).catch((err: unknown) => {
+        console.warn('refresh audio context output failed', err)
+      })
+    }
+    if (context.state != 'running' && !audio.paused) await context.resume().catch(() => {})
+    return
+  }
+  const deviceId = currentMediaDeviceId
+  const otherId = deviceId == '' ? 'default' : deviceId == 'default' ? '' : 'default'
+  await audio.setSinkId(otherId).then(async() => audio?.setSinkId(deviceId)).catch((err: unknown) => {
+    console.warn('refresh audio output failed', err)
+  })
+}
+
+/**
+ * The audio context, when the sound goes out of it (null otherwise)
+ */
+export const getStartedAudioContext = (): AudioContext | null => audioContext ?? null
+export const getAudioElementTime = (): number => audio?.currentTime ?? 0
+export const isAudioElementPlaying = (): boolean => !!audio && !audio.paused && !audio.ended && audio.readyState > 2
+
+// The volume of the slider (0 - 1) is heard on a curve, like the volume of other players: the loudness changes
+// evenly along the slider (it was the gain itself: everything below 10% was quiet, everything above too loud), and
+// 100% is the gain of 0.5 (-6 dB), about as loud as the players that even out the loudness of the songs.
+// (the volume saved before 2.2.0 of the settings, a gain, is turned into the slider: common/utils/migrateSetting.ts)
+export const VOLUME_MAX_GAIN = 0.5
+export const VOLUME_CURVE_POWER = 3
 export const setVolume = (volume: number) => {
-  if (audio) audio.volume = volume
+  if (audio) audio.volume = VOLUME_MAX_GAIN * Math.pow(Math.min(Math.max(volume, 0), 1), VOLUME_CURVE_POWER)
 }
 
 export const getDuration = () => {

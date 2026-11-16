@@ -17,6 +17,7 @@ import {
   getPicUrl as getLocalPicUrl,
   getLyricInfo as getLocalLyricInfo,
 } from './local'
+import { getDownloadedFilePath } from './downloaded'
 
 
 export const getMusicUrl = async({
@@ -37,6 +38,9 @@ export const getMusicUrl = async({
   } else if (musicInfo.source == 'local') {
     return getLocalMusicUrl({ musicInfo, isRefresh, onToggleSource, allowToggleSource })
   } else {
+    // a song downloaded plays from its file
+    const filePath = await getDownloadedFilePath(musicInfo)
+    if (filePath) return filePath
     return getOnlineMusicUrl({ musicInfo, isRefresh, quality, onToggleSource, allowToggleSource })
   }
 }

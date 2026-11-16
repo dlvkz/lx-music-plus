@@ -10,6 +10,9 @@ import { addDislikeInfo, hasDislike } from '@renderer/core/dislikeList'
 import { playNext } from '@renderer/core/player'
 import { playMusicInfo } from '@renderer/store/player/state'
 import { startSongRadio } from '@renderer/core/recommend'
+import { getDownloadedFilePath } from '@renderer/core/music/downloaded'
+import { openDirInExplorer } from '@renderer/utils/ipc'
+import { checkPath } from '@common/utils/nodejs'
 
 
 export default ({ props, list, selectedList, removeAllSelect }) => {
@@ -60,6 +63,15 @@ export default ({ props, list, selectedList, removeAllSelect }) => {
     if (!isStarted) dialog({ message: t('artist__radio_failed'), confirmButtonText: t('close') })
   }
 
+  // the file of a song downloaded or of a local song, shown in its folder
+  const handleOpenFile = async(index) => {
+    const minfo = list.value[index]
+    if (!minfo) return
+    const path = minfo.source == 'local' ? minfo.meta.filePath : await getDownloadedFilePath(minfo)
+    if (!path || !await checkPath(path)) return
+    openDirInExplorer(path)
+  }
+
   const handleRemoveMusic = async(index, single) => {
     if (selectedList.value.length && !single) {
       const confirm = await (selectedList.value.length > 1
@@ -84,5 +96,6 @@ export default ({ props, list, selectedList, removeAllSelect }) => {
     handleDislikeMusic,
     handleRemoveMusic,
     handleSongRadio,
+    handleOpenFile,
   }
 }

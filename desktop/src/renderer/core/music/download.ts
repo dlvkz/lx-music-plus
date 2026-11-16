@@ -14,10 +14,10 @@ export const getMusicUrl = async({ musicInfo, isRefresh, allowToggleSource = tru
   onToggleSource?: (musicInfo?: LX.Music.MusicInfoOnline) => void
   allowToggleSource?: boolean
 }): Promise<string> => {
-  if (!isRefresh) {
-    const path = await getDownloadFilePath(musicInfo, buildSavePath(musicInfo))
-    if (path) return path
-  }
+  // the file first, even when the url is refreshed (a song that failed to load, that took too long): online only
+  // when there is no file
+  const path = await getDownloadFilePath(musicInfo, buildSavePath(musicInfo))
+  if (path) return path
 
   return getOnlineMusicUrl({ musicInfo: musicInfo.metadata.musicInfo, isRefresh, onToggleSource, allowToggleSource })
 }

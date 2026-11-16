@@ -3,6 +3,8 @@ import musicSdk from '@renderer/utils/musicSdk'
 import { useI18n } from '@renderer/plugins/i18n'
 import { hasDislike } from '@renderer/core/dislikeList'
 import { fmState } from '@renderer/core/recommend'
+import { hasMusicFile } from '@renderer/core/music/downloaded'
+import { getDownloadList } from '@renderer/store/download/action'
 
 export default ({
   assertApiSupport,
@@ -12,6 +14,7 @@ export default ({
   handlePlayMusic,
   handlePlayMusicLater,
   handleSongRadio,
+  handleOpenFile,
   handleSearch,
   handleShowMusicToggleModal,
   handleShowMusicAddModal,
@@ -31,12 +34,15 @@ export default ({
     sort: true,
     toggleSource: true,
     download: true,
+    file: false,
     search: true,
     dislike: true,
     remove: true,
     sourceDetail: true,
   })
   const t = useI18n()
+  // (the songs downloaded: the menu shows their file)
+  getDownloadList()
   const menuLocation = shallowReactive({ x: 0, y: 0 })
   const isShowItemMenu = ref(false)
 
@@ -51,6 +57,12 @@ export default ({
         name: t('list__download'),
         action: 'download',
         disabled: !itemMenuControl.download,
+      },
+      {
+        // (a song downloaded, a local song: its file in the folder)
+        name: t('list__file'),
+        action: 'file',
+        hide: !itemMenuControl.file,
       },
       {
         name: t('list__play_later'),
@@ -117,6 +129,13 @@ export default ({
     itemMenuControl.download = assertApiSupport(musicInfo.source) && musicInfo.source != 'local'
 
     itemMenuControl.dislike = !hasDislike(musicInfo)
+    itemMenuControl.file = hasMusicFile(musicInfo)
+    // (the download tasks not loaded yet: the menu shows the file once they are)
+    if (!itemMenuControl.file && musicInfo.source != 'local') {
+      getDownloadList().then(() => {
+        itemMenuControl.file = hasMusicFile(musicInfo)
+      }).catch(() => {})
+    }
 
     menuLocation.x = event.pageX
     menuLocation.y = event.pageY
@@ -146,6 +165,9 @@ export default ({
         break
       case 'songRadio':
         handleSongRadio(index)
+        break
+      case 'file':
+        handleOpenFile(index)
         break
       case 'copyName':
         handleCopyName(index)

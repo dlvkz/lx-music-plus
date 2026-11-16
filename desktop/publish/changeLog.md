@@ -1,11 +1,11 @@
-### LX Music+ 1.2.0
+### LX Music+ 1.3.0
 
-- Collected artists and albums now sync between devices (both devices need this version)
-- Song radio: right-click a song (desktop) or open its menu (Android) and pick "Song radio"
-- Radio learns from skips: skipped songs and similar music come up less for a while, and two skips of the same kind
-  drop those songs from the queue; one artist no longer takes over the radio
-- Dynamic background keeps the colours of the cover: dark mode only darkens them, light mode can be colourful
-- Upcoming lyrics stay readable over light covers in light mode
-- Volume is an always-visible slider in the play bar and the player; click the speaker to mute / unmute
-- The desktop lyrics button is in the full-screen player only
-- Play bar: play order sits next to the volume
+- Downloaded songs always play from their file, wherever they are played from (a playlist, an album, the radio), and online only when there is no file
+- Song radio on the song that is playing keeps it playing: the radio comes after it
+- A + next to the song in the play bar adds it to a list, in a small popup like the queue
+- "Add to ..." opens the same popup where you click, instead of a dialog over the whole window
+- Click the lyrics in the play bar to open the player
+- The progress bar moves smoothly
+- The volume slider works like in other players: the loudness changes evenly along the slider and 100% is less loud (your volume is kept)
+- Right-click a downloaded or local song in a list: Reveal File
+- The sound comes back by itself when it was lost, for example when the app starts with the computer before its sound is ready
